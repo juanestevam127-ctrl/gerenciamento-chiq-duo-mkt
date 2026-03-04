@@ -14,7 +14,7 @@ interface Stats {
 
 export function KPICards({ stats }: { stats: Stats }) {
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
             <div className="glass-card p-4 rounded-xl flex flex-col justify-between h-28">
                 <div className="flex justify-between items-start">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Clientes</p>

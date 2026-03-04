@@ -251,20 +251,20 @@ export default function DashboardPage() {
                 <>
                     <KPICards stats={processedData.stats} />
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div className="lg:col-span-1">
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+                        <div className="xl:col-span-1">
                             <StatusChart data={processedData.statusDistribution} />
                         </div>
-                        <div className="lg:col-span-2">
+                        <div className="xl:col-span-2">
                             <HistoryChart data={processedData.history} />
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div className="lg:col-span-1">
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+                        <div className="xl:col-span-1">
                             <AlertsList alerts={alerts} />
                         </div>
-                        <div className="lg:col-span-2">
+                        <div className="xl:col-span-2">
                             <DelayedWebhookTrigger
                                 clients={alerts
                                     .filter(a => a.status === 'late')

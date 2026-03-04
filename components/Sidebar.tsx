@@ -39,13 +39,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Overlay for mobile */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm xl:hidden"
                     onClick={onClose}
                 />
             )}
 
-            <div className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/10 glass transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
-                } lg:static lg:inset-auto lg:z-auto`}>
+            <div className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/10 glass transition-transform duration-300 ease-in-out xl:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+                } xl:static xl:inset-auto xl:z-auto`}>
                 {/* Logo & Close Button */}
                 <div className="flex h-16 items-center justify-between border-b border-white/10 px-6 bg-purple-900/20">
                     <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </h1>
                     <button
                         onClick={onClose}
-                        className="p-1 text-slate-400 hover:text-white lg:hidden"
+                        className="p-1 text-slate-400 hover:text-white xl:hidden"
                     >
                         <X className="h-6 w-6" />
                     </button>
