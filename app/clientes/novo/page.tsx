@@ -46,19 +46,19 @@ export default function NovoClientePage() {
     };
 
     return (
-        <div className="p-8">
+        <div className="bg-transparent">
             <div className="mb-6">
                 <Link
                     href="/clientes"
-                    className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+                    className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
                 >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-4 w-4" />
                     Voltar
                 </Link>
             </div>
 
             <div className="max-w-2xl">
-                <h1 className="text-3xl font-bold text-white mb-6">Novo Cliente</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Novo Cliente</h1>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="glass-card p-6 rounded-xl space-y-6">
                     <div>
@@ -162,17 +162,17 @@ export default function NovoClientePage() {
                         </div>
                     )}
 
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 py-2 px-4 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+                            className="w-full py-2 px-4 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)]"
                         >
                             {isLoading ? 'Salvando...' : 'Salvar Cliente'}
                         </button>
                         <Link
                             href="/clientes"
-                            className="px-4 py-2 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-700/50 transition-colors"
+                            className="w-full py-2 px-4 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-700/50 transition-colors text-center"
                         >
                             Cancelar
                         </Link>

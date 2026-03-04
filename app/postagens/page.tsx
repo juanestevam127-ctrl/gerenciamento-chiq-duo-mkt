@@ -81,18 +81,18 @@ export default function PostagensPage() {
     const hasFilters = selectedCliente || startDate || endDate;
 
     return (
-        <div className="p-8 min-h-screen text-slate-200">
-            <div className="flex items-center justify-between mb-8">
+        <div className="min-h-screen text-slate-200 bg-transparent">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                         Controle de Postagens
                     </h1>
-                    <p className="text-slate-400 mt-1">Histórico de todas as postagens realizadas.</p>
+                    <p className="text-xs md:text-sm text-slate-400 mt-1">Histórico de todas as postagens realizadas.</p>
                 </div>
                 {hasFilters && (
                     <button
                         onClick={clearFilters}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 border border-slate-600 rounded-lg hover:bg-slate-700/50 transition-colors"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 border border-slate-600 rounded-lg hover:bg-slate-700/50 transition-colors w-full sm:w-auto justify-center"
                     >
                         <X className="h-3.5 w-3.5" />
                         Limpar filtros
@@ -101,52 +101,53 @@ export default function PostagensPage() {
             </div>
 
             {/* Filters */}
-            <div className="glass-card p-4 rounded-xl mb-6 flex flex-wrap items-center gap-3">
+            <div className="glass-card p-4 rounded-xl mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-2 text-slate-400">
                     <Filter className="h-5 w-5" />
-                    <span className="text-sm font-medium">Filtrar por:</span>
+                    <span className="text-sm font-medium">Filtrar:</span>
                 </div>
 
-                {/* Client filter */}
-                <select
-                    value={selectedCliente}
-                    onChange={(e) => setSelectedCliente(e.target.value)}
-                    className="bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 min-w-[200px]"
-                >
-                    <option value="">Todos os Clientes</option>
-                    {clientes.map((cliente) => (
-                        <option key={cliente.id} value={cliente.id_instagram}>
-                            @{cliente.username_instagram}
-                        </option>
-                    ))}
-                </select>
+                <div className="grid grid-cols-1 md:flex md:items-center gap-3 w-full">
+                    {/* Client filter */}
+                    <select
+                        value={selectedCliente}
+                        onChange={(e) => setSelectedCliente(e.target.value)}
+                        className="bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500 w-full md:min-w-[200px]"
+                    >
+                        <option value="">Todos os Clientes</option>
+                        {clientes.map((cliente) => (
+                            <option key={cliente.id} value={cliente.id_instagram}>
+                                @{cliente.username_instagram}
+                            </option>
+                        ))}
+                    </select>
 
-                {/* Date range filter */}
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1.5 text-slate-400 text-sm">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span>De:</span>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        {/* Date range filter */}
+                        <div className="flex items-center gap-2 flex-1">
+                            <span className="text-slate-400 text-xs sm:text-sm whitespace-nowrap">De:</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark] w-full"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 flex-1">
+                            <span className="text-slate-400 text-xs sm:text-sm whitespace-nowrap">Até:</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark] w-full"
+                            />
+                        </div>
                     </div>
-                    <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
-                    />
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-sm">Até:</span>
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
-                    />
                 </div>
             </div>
 
             {/* Results Table */}
-            <div className="glass-card rounded-xl overflow-hidden">
+            <div className="glass-card rounded-xl overflow-x-auto">
                 {isLoading ? (
                     <div className="p-12 text-center text-slate-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mx-auto mb-2"></div>

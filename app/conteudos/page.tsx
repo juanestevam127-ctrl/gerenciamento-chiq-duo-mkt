@@ -68,17 +68,17 @@ export default function ConteudosPage() {
     };
 
     return (
-        <div className="p-8 min-h-screen text-slate-200">
-            <div className="flex justify-between items-center mb-8">
+        <div className="min-h-screen text-slate-200 bg-transparent">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                         Conteúdos
                     </h1>
-                    <p className="text-slate-400 mt-1">Gerencie os conteúdos agendados para seus clientes.</p>
+                    <p className="text-xs md:text-sm text-slate-400 mt-1">Gerencie os conteúdos agendados para seus clientes.</p>
                 </div>
                 <Link
                     href="/conteudos/novo"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-lg shadow-purple-900/20"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-lg shadow-purple-900/20"
                 >
                     <Plus className="h-5 w-5" />
                     Novo Conteúdo
@@ -91,17 +91,17 @@ export default function ConteudosPage() {
                 </div>
             ) : conteudos.length === 0 ? (
                 <div className="text-center py-16 glass-card rounded-xl border-dashed border-slate-700">
-                    <p className="text-slate-400 mb-4 text-lg">Nenhum conteúdo agendado ainda.</p>
+                    <p className="text-slate-400 mb-4 text-sm md:text-lg">Nenhum conteúdo agendado ainda.</p>
                     <Link
                         href="/conteudos/novo"
-                        className="text-purple-400 hover:text-purple-300 font-medium underline underline-offset-4"
+                        className="text-purple-400 hover:text-purple-300 font-medium underline underline-offset-4 text-sm"
                     >
                         Agendar primeiro conteúdo
                     </Link>
                 </div>
             ) : (
-                <div className="glass-card rounded-xl overflow-hidden">
-                    <table className="w-full text-left">
+                <div className="glass-card rounded-xl overflow-x-auto">
+                    <table className="w-full text-left min-w-[600px]">
                         <thead className="bg-slate-900/50 text-slate-200 uppercase text-xs font-medium border-b border-white/5">
                             <tr>
                                 <th className="px-6 py-4">Data</th>

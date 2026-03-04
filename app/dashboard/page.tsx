@@ -225,24 +225,26 @@ export default function DashboardPage() {
     }, [processedData, mounted]);
 
     return (
-        <div className="p-8 min-h-screen bg-slate-950 text-white pb-20">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="min-h-screen bg-transparent text-white pb-20">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                <div className="w-full sm:w-auto">
+                    <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
                         Dashboard de Postagens
                     </h1>
-                    <p className="text-slate-400 mt-1 flex items-center gap-2">
+                    <p className="text-xs md:text-sm text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
                         <span>Acompanhamento em tempo real</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-500"></span>
-                        <span className="text-xs">
+                        <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-500"></span>
+                        <span className="text-[10px] sm:text-xs">
                             {mounted ? `Atualizado às ${format(lastUpdated, 'HH:mm:ss')}` : 'Carregando...'}
                         </span>
                     </p>
                 </div>
-                <FilterBar
-                    onFilterChange={(start, end, label) => setDateRange({ start, end, label })}
-                    isLoading={isLoading}
-                />
+                <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                    <FilterBar
+                        onFilterChange={(start, end, label) => setDateRange({ start, end, label })}
+                        isLoading={isLoading}
+                    />
+                </div>
             </div>
 
             {processedData && (
