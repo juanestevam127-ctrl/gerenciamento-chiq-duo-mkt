@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 // GET all content
 export async function GET() {
     try {
@@ -32,17 +34,20 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         console.log('API POST /api/conteudos: Creating new content with body:', JSON.stringify(body, null, 2));
 
+        // Filter out undefined and null values
+        const payload: any = {
+            data_postagem: body.data_postagem,
+        };
+        if (body.descricao) payload.descricao = body.descricao;
+        if (body.imagem_estatica) payload.imagem_estatica = body.imagem_estatica;
+        if (body.carrossel) payload.carrossel = body.carrossel;
+        if (body.reels) payload.reels = body.reels;
+        if (body.stories) payload.stories = body.stories;
+        if (body.id_instagram) payload.id_instagram = body.id_instagram;
+
         const { data, error } = await supabase
             .from('Conteúdos Chiquinho Sorvetes')
-            .insert([{
-                data_postagem: body.data_postagem,
-                descricao: body.descricao || null,
-                imagem_estatica: body.imagem_estatica || null,
-                carrossel: body.carrossel || null,
-                reels: body.reels || null,
-                stories: body.stories || null,
-                id_instagram: body.id_instagram || null,
-            }])
+            .insert([payload])
             .select();
 
         if (error) {

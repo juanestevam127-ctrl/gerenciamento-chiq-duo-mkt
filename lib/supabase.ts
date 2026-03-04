@@ -9,6 +9,14 @@ console.log('Supabase config check:', {
     bucket: process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'conteudo-chiquinho'
 });
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+    global: {
+        fetch: (url, options) => {
+            console.log('[SUPABASE FETCH IN NEXT.JS]', url);
+            return fetch(url, { ...options, cache: 'no-store' });
+        }
+    }
+});
 
 export const STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'conteudo-chiquinho';

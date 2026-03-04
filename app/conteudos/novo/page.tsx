@@ -189,7 +189,7 @@ export default function NovoConteudoPage() {
                                     {...register('descricao')}
                                     id="descricao"
                                     rows={3}
-                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500 resize-none min-h-[100px]"
+                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500 resize-y min-h-[100px]"
                                     placeholder="Breve descrição..."
                                 />
                             </div>
