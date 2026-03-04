@@ -34,6 +34,7 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await request.json();
+        console.log(`API PUT /api/conteudos/${id}: Updating content with body:`, JSON.stringify(body, null, 2));
 
         const { data, error } = await supabase
             .from('Conteúdos Chiquinho Sorvetes')
@@ -44,13 +45,17 @@ export async function PUT(
                 carrossel: body.carrossel || null,
                 reels: body.reels || null,
                 stories: body.stories || null,
+                id_instagram: body.id_instagram || null,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error updating content:', error);
+            throw error;
+        }
 
         return NextResponse.json(data);
     } catch (error: any) {

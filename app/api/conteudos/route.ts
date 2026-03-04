@@ -30,6 +30,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+        console.log('API POST /api/conteudos: Creating new content with body:', JSON.stringify(body, null, 2));
 
         const { data, error } = await supabase
             .from('Conteúdos Chiquinho Sorvetes')
@@ -40,18 +41,25 @@ export async function POST(request: NextRequest) {
                 carrossel: body.carrossel || null,
                 reels: body.reels || null,
                 stories: body.stories || null,
-                id_instagram: body.id_instagram || null, // Optional link to specific client
+                id_instagram: body.id_instagram || null,
             }])
-            .select()
-            .single();
+            .select();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error creating content:', error);
+            throw error;
+        }
 
-        return NextResponse.json(data, { status: 201 });
-    } catch (error) {
+        if (!data || data.length === 0) {
+            throw new Error('Nenhum dado retornado após a inserção');
+        }
+
+        console.log('API POST /api/conteudos: Success, created item:', data[0].id);
+        return NextResponse.json(data[0], { status: 201 });
+    } catch (error: any) {
         console.error('Error creating content:', error);
         return NextResponse.json(
-            { error: 'Erro ao criar conteúdo' },
+            { error: 'Erro ao criar conteúdo', details: error.message },
             { status: 500 }
         );
     }

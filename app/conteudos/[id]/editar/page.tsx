@@ -169,6 +169,7 @@ export default function EditarConteudoPage({
                 carrossel: null,
                 reels: existingReelsUrl || null,
                 stories: existingStoriesUrl || null,
+                id_instagram: data.id_instagram || null,
             };
 
             // Process static
@@ -258,10 +259,11 @@ export default function EditarConteudoPage({
                                 <label htmlFor="descricao" className="block text-sm font-medium text-slate-300 mb-2">
                                     Descrição (Opcional)
                                 </label>
-                                <input
+                                <textarea
                                     {...register('descricao')}
                                     id="descricao"
-                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500"
+                                    rows={3}
+                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500 resize-none min-h-[100px]"
                                     placeholder="Breve descrição..."
                                 />
                             </div>
