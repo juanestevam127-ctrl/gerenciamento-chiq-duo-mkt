@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+
+// GET all content
+export async function GET() {
+    try {
+        console.log('API GET /api/conteudos: Fetching from Supabase...');
+        const { data, error } = await supabase
+            .from('Conteúdos Chiquinho Sorvetes')
+            .select('*')
+            .order('data_postagem', { ascending: false });
+
+        if (error) {
+            console.error('Supabase error fetching content:', error);
+            throw error;
+        }
+
+        console.log('API GET /api/conteudos: Success, found', data?.length || 0, 'items');
+        return NextResponse.json(data || []);
+    } catch (error: any) {
+        console.error('Error fetching content:', error);
+        return NextResponse.json(
+            { error: 'Erro ao buscar conteúdos', details: error.message },
+            { status: 500 }
+        );
+    }
+}
+
+// POST new content
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+
+        const { data, error } = await supabase
+            .from('Conteúdos Chiquinho Sorvetes')
+            .insert([{
+                data_postagem: body.data_postagem,
+                descricao: body.descricao || null,
+                imagem_estatica: body.imagem_estatica || null,
+                carrossel: body.carrossel || null,
+                reels: body.reels || null,
+                stories: body.stories || null,
+                id_instagram: body.id_instagram || null, // Optional link to specific client
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return NextResponse.json(data, { status: 201 });
+    } catch (error) {
+        console.error('Error creating content:', error);
+        return NextResponse.json(
+            { error: 'Erro ao criar conteúdo' },
+            { status: 500 }
+        );
+    }
+}
