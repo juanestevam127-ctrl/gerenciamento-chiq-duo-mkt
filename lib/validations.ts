@@ -12,7 +12,7 @@ export const clienteSchema = z.object({
 export const conteudoSchema = z.object({
     data_postagem: z.string().min(1, 'Data da postagem é obrigatória'),
     descricao: z.string().optional(),
-    tipo_conteudo: z.enum(['imagem_estatica', 'carrossel', 'reels', 'stories']),
+    id_instagram: z.string().optional(),
 });
 
 export const loginSchema = z.object({

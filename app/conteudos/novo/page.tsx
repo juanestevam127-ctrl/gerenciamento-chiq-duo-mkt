@@ -14,9 +14,18 @@ export default function NovoConteudoPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [tipoConteudo, setTipoConteudo] = useState<TipoConteudo>('imagem_estatica');
-    const [files, setFiles] = useState<File[]>([]);
-    const [previews, setPreviews] = useState<string[]>([]);
+
+    // States for each type
+    const [staticFile, setStaticFile] = useState<File | null>(null);
+    const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
+    const [reelsFile, setReelsFile] = useState<File | null>(null);
+    const [storiesFile, setStoriesFile] = useState<File | null>(null);
+
+    // Previews
+    const [staticPreview, setStaticPreview] = useState<string>('');
+    const [carouselPreviews, setCarouselPreviews] = useState<string[]>([]);
+    const [reelsPreview, setReelsPreview] = useState<string>('');
+    const [storiesPreview, setStoriesPreview] = useState<string>('');
 
     const {
         register,
@@ -24,32 +33,46 @@ export default function NovoConteudoPage() {
         formState: { errors },
     } = useForm<ConteudoFormData>({
         resolver: zodResolver(conteudoSchema),
-        defaultValues: {
-            tipo_conteudo: 'imagem_estatica',
-        },
     });
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (type: TipoConteudo, e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFiles = Array.from(e.target.files || []);
+        if (selectedFiles.length === 0) return;
 
-        if (tipoConteudo === 'carrossel') {
-            setFiles(selectedFiles);
+        if (type === 'imagem_estatica') {
+            setStaticFile(selectedFiles[0]);
+            setStaticPreview(URL.createObjectURL(selectedFiles[0]));
+        } else if (type === 'carrossel') {
+            setCarouselFiles(prev => [...prev, ...selectedFiles]);
             const newPreviews = selectedFiles.map(file => URL.createObjectURL(file));
-            setPreviews(newPreviews);
-        } else {
-            setFiles([selectedFiles[0]]);
-            setPreviews([URL.createObjectURL(selectedFiles[0])]);
+            setCarouselPreviews(prev => [...prev, ...newPreviews]);
+        } else if (type === 'reels') {
+            setReelsFile(selectedFiles[0]);
+            setReelsPreview(URL.createObjectURL(selectedFiles[0]));
+        } else if (type === 'stories') {
+            setStoriesFile(selectedFiles[0]);
+            setStoriesPreview(URL.createObjectURL(selectedFiles[0]));
         }
     };
 
-    const removeFile = (index: number) => {
-        setFiles(files.filter((_, i) => i !== index));
-        setPreviews(previews.filter((_, i) => i !== index));
+    const removeFile = (type: TipoConteudo, index?: number) => {
+        if (type === 'imagem_estatica') {
+            setStaticFile(null);
+            setStaticPreview('');
+        } else if (type === 'carrossel' && index !== undefined) {
+            setCarouselFiles(prev => prev.filter((_, i) => i !== index));
+            setCarouselPreviews(prev => prev.filter((_, i) => i !== index));
+        } else if (type === 'reels') {
+            setReelsFile(null);
+            setReelsPreview('');
+        } else if (type === 'stories') {
+            setStoriesFile(null);
+            setStoriesPreview('');
+        }
     };
 
     const uploadFile = async (file: File): Promise<string> => {
         const fileName = `${Date.now()}_${file.name}`;
-
         const { error: uploadError } = await supabase.storage
             .from(STORAGE_BUCKET)
             .upload(fileName, file);
@@ -64,8 +87,8 @@ export default function NovoConteudoPage() {
     };
 
     const onSubmit = async (data: ConteudoFormData) => {
-        if (files.length === 0) {
-            setError('Por favor, selecione pelo menos um arquivo');
+        if (!staticFile && carouselFiles.length === 0 && !reelsFile && !storiesFile) {
+            setError('Por favor, selecione pelo menos um arquivo em qualquer uma das categorias');
             return;
         }
 
@@ -78,24 +101,30 @@ export default function NovoConteudoPage() {
                 descricao: data.descricao || null,
             };
 
-            // Upload files based on content type
-            if (tipoConteudo === 'imagem_estatica') {
-                const url = await uploadFile(files[0]);
-                contentData.imagem_estatica = url;
-            } else if (tipoConteudo === 'carrossel') {
-                const uploadPromises = files.map(file => uploadFile(file));
+            // Upload static
+            if (staticFile) {
+                contentData.imagem_estatica = await uploadFile(staticFile);
+            }
+
+            // Upload carousel
+            if (carouselFiles.length > 0) {
+                const uploadPromises = carouselFiles.map(file => uploadFile(file));
                 const urls = await Promise.all(uploadPromises);
                 const carouselData: CarouselItem[] = urls.map((url, index) => ({
                     posicao: index + 1,
                     imagem_url: url,
                 }));
                 contentData.carrossel = carouselData;
-            } else if (tipoConteudo === 'reels') {
-                const url = await uploadFile(files[0]);
-                contentData.reels = url;
-            } else if (tipoConteudo === 'stories') {
-                const url = await uploadFile(files[0]);
-                contentData.stories = url;
+            }
+
+            // Upload reels
+            if (reelsFile) {
+                contentData.reels = await uploadFile(reelsFile);
+            }
+
+            // Upload stories
+            if (storiesFile) {
+                contentData.stories = await uploadFile(storiesFile);
             }
 
             const response = await fetch('/api/conteudos', {
@@ -119,135 +148,150 @@ export default function NovoConteudoPage() {
     };
 
     return (
-        <div className="p-8 min-h-screen">
+        <div className="min-h-screen text-slate-200 bg-transparent">
             <div className="mb-6">
                 <Link
                     href="/conteudos"
                     className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
                 >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-4 w-4" />
                     Voltar
                 </Link>
             </div>
 
-            <div className="max-w-3xl">
-                <h1 className="text-3xl font-bold text-white mb-6">Novo Conteúdo</h1>
+            <div className="max-w-4xl">
+                <h1 className="text-2xl md:text-3xl font-bold text-white mb-6">Novo Conteúdo</h1>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="glass-card p-6 rounded-xl space-y-6">
-                    <div>
-                        <label htmlFor="data_postagem" className="block text-sm font-medium text-slate-300 mb-2">
-                            Data da Postagem *
-                        </label>
-                        <input
-                            {...register('data_postagem')}
-                            type="date"
-                            id="data_postagem"
-                            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
-                        />
-                        {errors.data_postagem && (
-                            <p className="mt-1 text-sm text-red-400">{errors.data_postagem.message}</p>
-                        )}
-                    </div>
-
-                    <div>
-                        <label htmlFor="descricao" className="block text-sm font-medium text-slate-300 mb-2">
-                            Descrição (Opcional)
-                        </label>
-                        <textarea
-                            {...register('descricao')}
-                            id="descricao"
-                            rows={4}
-                            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500"
-                            placeholder="Descrição do conteúdo..."
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-3">
-                            Tipo de Conteúdo *
-                        </label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { id: 'imagem_estatica', label: 'Imagem Static' },
-                                { id: 'carrossel', label: 'Carrossel' },
-                                { id: 'reels', label: 'Reels' },
-                                { id: 'stories', label: 'Stories' },
-                            ].map(type => (
-                                <button
-                                    key={type.id}
-                                    type="button"
-                                    onClick={() => {
-                                        setTipoConteudo(type.id as TipoConteudo);
-                                        setFiles([]);
-                                        setPreviews([]);
-                                    }}
-                                    className={`py-3 px-4 rounded-lg border text-sm font-medium transition-all ${tipoConteudo === type.id
-                                        ? 'bg-purple-600/20 border-purple-500 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
-                                        : 'bg-slate-800/30 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
-                                        }`}
-                                >
-                                    {type.label}
-                                </button>
-                            ))}
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-20">
+                    <div className="glass-card p-4 md:p-6 rounded-xl space-y-6">
+                        {/* Basic Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="data_postagem" className="block text-sm font-medium text-slate-300 mb-2">
+                                    Data da Postagem *
+                                </label>
+                                <input
+                                    {...register('data_postagem')}
+                                    type="date"
+                                    id="data_postagem"
+                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                                />
+                                {errors.data_postagem && (
+                                    <p className="mt-1 text-sm text-red-400">{errors.data_postagem.message}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label htmlFor="descricao" className="block text-sm font-medium text-slate-300 mb-2">
+                                    Descrição (Opcional)
+                                </label>
+                                <input
+                                    {...register('descricao')}
+                                    id="descricao"
+                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500"
+                                    placeholder="Breve descrição..."
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                            Upload de Arquivo(s) *
-                        </label>
-                        <div className="border-2 border-dashed border-slate-600 rounded-lg p-6 text-center hover:border-purple-500/70 hover:bg-slate-800/30 transition-all group">
-                            <Upload className="h-12 w-12 text-slate-500 mx-auto mb-3 group-hover:text-purple-400 transition-colors" />
-                            <input
-                                type="file"
-                                accept={tipoConteudo === 'reels' ? 'video/*' : 'image/*'}
-                                multiple={tipoConteudo === 'carrossel'}
-                                onChange={handleFileChange}
-                                className="hidden"
-                                id="file-upload"
-                            />
-                            <label
-                                htmlFor="file-upload"
-                                className="cursor-pointer text-purple-400 hover:text-purple-300 font-medium"
-                            >
-                                Clique para selecionar {tipoConteudo === 'carrossel' ? 'imagens' : 'arquivo'}
-                            </label>
-                            <p className="text-sm text-slate-500 mt-1">
-                                {tipoConteudo === 'carrossel' ? 'Você pode selecionar múltiplos arquivos' : 'Selecione um único arquivo'}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* File Previews */}
-                    {previews.length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {previews.map((preview, index) => (
-                                <div key={index} className="relative group">
-                                    {tipoConteudo === 'reels' || preview.includes('video') ? (
-                                        <video src={preview} className="w-full h-32 object-cover rounded-lg border border-slate-700" />
-                                    ) : (
-                                        <img
-                                            src={preview}
-                                            alt={`Preview ${index + 1}`}
-                                            className="w-full h-32 object-cover rounded-lg border border-slate-700"
-                                        />
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={() => removeFile(index)}
-                                        className="absolute top-2 right-2 p-1.5 bg-red-500/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600"
-                                    >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Static Image Section */}
+                        <div className="glass-card p-4 rounded-xl border border-white/5 space-y-4">
+                            <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Imagem Estática</h3>
+                            {!staticPreview ? (
+                                <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-purple-500/50 transition-all">
+                                    <input type="file" accept="image/*" onChange={(e) => handleFileChange('imagem_estatica', e)} className="hidden" id="static-up" />
+                                    <label htmlFor="static-up" className="cursor-pointer block">
+                                        <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+                                        <span className="text-xs text-slate-400">Clique para subir</span>
+                                    </label>
+                                </div>
+                            ) : (
+                                <div className="relative group rounded-lg overflow-hidden border border-slate-700">
+                                    <img src={staticPreview} className="w-full h-40 object-cover" />
+                                    <button onClick={() => removeFile('imagem_estatica')} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full">
                                         <X className="h-3 w-3" />
                                     </button>
-                                    {tipoConteudo === 'carrossel' && (
-                                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded border border-white/10">
-                                            {index + 1}
-                                        </div>
-                                    )}
                                 </div>
-                            ))}
+                            )}
                         </div>
-                    )}
+
+                        {/* Reels Section */}
+                        <div className="glass-card p-4 rounded-xl border border-white/5 space-y-4">
+                            <h3 className="text-sm font-bold text-orange-400 uppercase tracking-wider">Reels</h3>
+                            {!reelsPreview ? (
+                                <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-orange-500/50 transition-all">
+                                    <input type="file" accept="video/*" onChange={(e) => handleFileChange('reels', e)} className="hidden" id="reels-up" />
+                                    <label htmlFor="reels-up" className="cursor-pointer block">
+                                        <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+                                        <span className="text-xs text-slate-400">Clique para subir vídeo</span>
+                                    </label>
+                                </div>
+                            ) : (
+                                <div className="relative group rounded-lg overflow-hidden border border-slate-700">
+                                    <video src={reelsPreview} className="w-full h-40 object-cover" controls />
+                                    <button onClick={() => removeFile('reels')} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Stories Section */}
+                        <div className="glass-card p-4 rounded-xl border border-white/5 space-y-4">
+                            <h3 className="text-sm font-bold text-pink-400 uppercase tracking-wider">Stories</h3>
+                            {!storiesPreview ? (
+                                <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-pink-500/50 transition-all">
+                                    <input type="file" accept="image/*,video/*" onChange={(e) => handleFileChange('stories', e)} className="hidden" id="stories-up" />
+                                    <label htmlFor="stories-up" className="cursor-pointer block">
+                                        <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+                                        <span className="text-xs text-slate-400">Clique para subir</span>
+                                    </label>
+                                </div>
+                            ) : (
+                                <div className="relative group rounded-lg overflow-hidden border border-slate-700">
+                                    {storiesFile?.type.startsWith('video') ? (
+                                        <video src={storiesPreview} className="w-full h-40 object-cover" controls />
+                                    ) : (
+                                        <img src={storiesPreview} className="w-full h-40 object-cover" />
+                                    )}
+                                    <button onClick={() => removeFile('stories')} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Carousel Section */}
+                        <div className="glass-card p-4 rounded-xl border border-white/5 space-y-4">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Carrossel</h3>
+                                <div className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+                                    {carouselFiles.length} arquivos
+                                </div>
+                            </div>
+                            <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-blue-500/50 transition-all">
+                                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange('carrossel', e)} className="hidden" id="carousel-up" />
+                                <label htmlFor="carousel-up" className="cursor-pointer block">
+                                    <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+                                    <span className="text-xs text-slate-400">Adicionar imagens</span>
+                                </label>
+                            </div>
+                            {carouselPreviews.length > 0 && (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {carouselPreviews.map((p, idx) => (
+                                        <div key={idx} className="relative group aspect-square rounded border border-slate-700 overflow-hidden">
+                                            <img src={p} className="w-full h-full object-cover" />
+                                            <button onClick={() => removeFile('carrossel', idx)} className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full">
+                                                <X className="h-2 w-2" />
+                                            </button>
+                                            <span className="absolute bottom-1 left-1 text-[8px] bg-black/60 px-1 rounded">{idx + 1}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {error && (
                         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
@@ -255,20 +299,14 @@ export default function NovoConteudoPage() {
                         </div>
                     )}
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 sticky bottom-4">
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 py-2 px-4 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+                            className="flex-1 py-3 px-4 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-all shadow-lg shadow-purple-900/40"
                         >
-                            {isLoading ? 'Salvando...' : 'Agendar Conteúdo'}
+                            {isLoading ? 'Salvando...' : 'Agendar Tudo'}
                         </button>
-                        <Link
-                            href="/conteudos"
-                            className="px-4 py-2 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-700/50 transition-colors"
-                        >
-                            Cancelar
-                        </Link>
                     </div>
                 </form>
             </div>
