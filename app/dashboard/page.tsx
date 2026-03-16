@@ -8,7 +8,7 @@ import { KPICards } from './components/KPICards';
 import { StatusChart } from './components/StatusChart';
 import { HistoryChart } from './components/HistoryChart';
 import { AlertsList } from './components/AlertsList';
-import { DelayedWebhookTrigger } from './components/DelayedWebhookTrigger';
+import { AutoRetryMonitor } from './components/AutoRetryMonitor';
 import { DetailedTable } from './components/DetailedTable';
 import { Cliente, Conteudo, ControlePostagem } from '@/types/database';
 import { parseLocalDate } from '@/lib/utils';
@@ -122,9 +122,15 @@ export default function DashboardPage() {
 
                 const hasFeedPost = clientPosts.some(p => p.tipo_postagem === 'FEED');
                 const hasStoriesPost = clientPosts.some(p => p.tipo_postagem === 'STORIES');
+                const hasFeedFbPost = clientPosts.some(p => p.tipo_postagem === 'FEED FACEBOOK');
+                const hasStoriesFbPost = clientPosts.some(p => p.tipo_postagem === 'STORIES FACEBOOK');
+
+                const hasFacebook = !!(cliente.id_pagina_facebook && cliente.token_facebook);
 
                 // Determine if everything required is done
-                const isAllDone = (!needsFeed || hasFeedPost) && (!needsStories || hasStoriesPost);
+                const isAllDone = hasFacebook
+                    ? (hasFeedPost && hasStoriesPost && hasFeedFbPost && hasStoriesFbPost)
+                    : ((!needsFeed || hasFeedPost) && (!needsStories || hasStoriesPost));
 
                 // 3. Determine Status
                 let status = 'no_content';
@@ -264,12 +270,13 @@ export default function DashboardPage() {
                         <div className="xl:col-span-1">
                             <AlertsList alerts={alerts} />
                         </div>
-                        <div className="xl:col-span-2">
-                            <DelayedWebhookTrigger
-                                clients={alerts
+                    <div className="xl:col-span-2">
+                            <AutoRetryMonitor
+                                lateClients={alerts
                                     .filter(a => a.status === 'late')
-                                    .map(a => ({ cliente: a.cliente, horaProgramada: a.horaProgramada, conteudos: a.conteudos }))
+                                    .map(a => ({ cliente: a.cliente, horaProgramada: a.horaProgramada }))
                                 }
+                                onRefresh={fetchDashboardData}
                             />
                         </div>
                     </div>
