@@ -84,10 +84,7 @@ export default function ClientesPage() {
                         <thead className="bg-slate-800/30">
                             <tr>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                                    Nome
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                                    Instagram
+                                    Cliente
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
                                     ID Instagram
@@ -104,13 +101,13 @@ export default function ClientesPage() {
                             {clientes.map((cliente) => (
                                 <tr key={cliente.id} className="hover:bg-slate-700/30 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-white">
-                                            {cliente.nome_cliente}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-slate-400">
-                                            @{cliente.username_instagram}
+                                        <div className="flex flex-col">
+                                            <div className="text-sm font-medium text-white">
+                                                {cliente.nome_cliente}
+                                            </div>
+                                            <div className="text-xs text-purple-400">
+                                                @{cliente.username_instagram}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">

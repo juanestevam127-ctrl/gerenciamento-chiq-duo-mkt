@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
             date,
             cliente: {
                 nome: cliente.nome_cliente,
+                username_instagram: cliente.username_instagram,
                 horario_postagem: cliente.horario_postagem,
                 tem_facebook: !!(cliente.id_pagina_facebook && cliente.token_facebook)
             },

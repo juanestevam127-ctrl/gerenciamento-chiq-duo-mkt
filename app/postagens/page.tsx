@@ -181,8 +181,11 @@ export default function PostagensPage() {
                                         <td className="px-6 py-4 whitespace-nowrap text-white font-medium">
                                             {format(new Date(post.data_postagem + 'T12:00:00'), 'dd/MM/yyyy')}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-purple-400 font-medium">
-                                            @{resolveUsername(post)}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <span className="text-white font-medium">{post.cliente?.nome_cliente || '-'}</span>
+                                                <span className="text-xs text-purple-400 font-medium">@{resolveUsername(post)}</span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${post.tipo_postagem === 'FEED'

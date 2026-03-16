@@ -76,7 +76,12 @@ export async function POST(request: NextRequest) {
             // Check if 5 minutes have passed since scheduled time
             const fiveMinAfterSchedule = new Date(scheduledTime.getTime() + 5 * 60 * 1000);
             if (nowUtc < fiveMinAfterSchedule) {
-                results.push({ cliente: cliente.nome_cliente, action: 'aguardando', reason: 'Horario ainda nao passou' });
+                results.push({ 
+                    cliente: cliente.nome_cliente, 
+                    username_instagram: cliente.username_instagram,
+                    action: 'aguardando', 
+                    reason: 'Horario ainda nao passou' 
+                });
                 continue;
             }
 
@@ -84,7 +89,12 @@ export async function POST(request: NextRequest) {
             const clientePostagens = allPostagens.filter(p => p.id_instagram === cliente.id_instagram);
             const required = getRequiredTypes(cliente);
             if (isPostingComplete(clientePostagens, required)) {
-                results.push({ cliente: cliente.nome_cliente, action: 'completo', tipos: required });
+                results.push({ 
+                    cliente: cliente.nome_cliente, 
+                    username_instagram: cliente.username_instagram,
+                    action: 'completo', 
+                    tipos: required 
+                });
                 continue;
             }
 
@@ -97,7 +107,12 @@ export async function POST(request: NextRequest) {
 
             // Max retries reached
             if (tentativasCount >= 3) {
-                results.push({ cliente: cliente.nome_cliente, action: 'max_tentativas', tentativas: tentativasCount });
+                results.push({ 
+                    cliente: cliente.nome_cliente, 
+                    username_instagram: cliente.username_instagram,
+                    action: 'max_tentativas', 
+                    tentativas: tentativasCount 
+                });
                 continue;
             }
 
@@ -109,6 +124,7 @@ export async function POST(request: NextRequest) {
                 if (nowUtc < nextRetryTime) {
                     results.push({
                         cliente: cliente.nome_cliente,
+                        username_instagram: cliente.username_instagram,
                         action: 'aguardando_retry',
                         tentativa_atual: tentativasCount,
                         proximo_retry: nextRetryTime.toISOString()
@@ -149,6 +165,7 @@ export async function POST(request: NextRequest) {
 
             results.push({
                 cliente: cliente.nome_cliente,
+                username_instagram: cliente.username_instagram,
                 action: 'webhook_disparado',
                 tentativa: nextTentativa,
                 status: webhookStatus,

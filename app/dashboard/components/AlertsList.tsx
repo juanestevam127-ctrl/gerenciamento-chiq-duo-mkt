@@ -60,8 +60,11 @@ function AlertItem({
                 <div className={`p-2 rounded-full shrink-0 ${status === 'late' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
                     {status === 'late' ? <AlertTriangle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                 </div>
-                <div className="min-w-0">
-                    <h4 className="text-white font-medium text-sm truncate">{cliente.nome_cliente}</h4>
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-col">
+                        <h4 className="text-white font-medium text-sm truncate leading-tight">{cliente.nome_cliente}</h4>
+                        <span className="text-[11px] text-purple-400 font-medium leading-tight">@{cliente.username_instagram}</span>
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-slate-400 flex-wrap">
                         {status === 'late' ? (
                             <span className="text-red-300">Atrasado (Era às {horaProgramada})</span>

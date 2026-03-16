@@ -6,6 +6,7 @@ import { Cliente } from '@/types/database';
 
 interface RetryResult {
     cliente: string;
+    username_instagram?: string;
     action: 'completo' | 'webhook_disparado' | 'aguardando' | 'aguardando_retry' | 'max_tentativas';
     tentativa?: number;
     status?: 'success' | 'failed';
@@ -231,7 +232,12 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
                                 <ActionIcon action={result.action} />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm font-medium text-white">{result.cliente}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-white leading-tight">{result.cliente}</span>
+                                            {result.username_instagram && (
+                                                <span className="text-[11px] text-purple-400 font-medium">@{result.username_instagram}</span>
+                                            )}
+                                        </div>
                                         {result.action === 'webhook_disparado' && (
                                             <RetryBadge tentativa={result.tentativa} status={result.status} />
                                         )}
