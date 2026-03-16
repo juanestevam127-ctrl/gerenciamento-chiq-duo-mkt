@@ -44,6 +44,8 @@ export async function PUT(
                 horario_postagem: body.horario_postagem || null,
                 token: body.token || null,
                 webhook: body.webhook || null,
+                id_pagina_facebook: body.id_pagina_facebook || null,
+                token_facebook: body.token_facebook || null,
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)

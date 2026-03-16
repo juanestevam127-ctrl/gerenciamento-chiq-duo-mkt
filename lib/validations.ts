@@ -7,6 +7,8 @@ export const clienteSchema = z.object({
     horario_postagem: z.string().optional(),
     token: z.string().optional(),
     webhook: z.string().url('URL inválida').optional().or(z.literal('')),
+    id_pagina_facebook: z.string().optional(),
+    token_facebook: z.string().optional(),
 });
 
 export const conteudoSchema = z.object({
@@ -23,7 +25,7 @@ export const loginSchema = z.object({
 export const postSchema = z.object({
     data_postagem: z.string().min(1, 'Data da postagem é obrigatória'),
     id_instagram: z.string().min(1, 'Cliente é obrigatório'),
-    tipo_postagem: z.enum(['FEED', 'STORIES']),
+    tipo_postagem: z.enum(['FEED', 'STORIES', 'FEED FACEBOOK', 'STORIES FACEBOOK']),
     conteudo_id: z.string().optional(),
 });
 

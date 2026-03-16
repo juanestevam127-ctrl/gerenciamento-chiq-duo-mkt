@@ -156,6 +156,40 @@ export default function NovoClientePage() {
                         )}
                     </div>
 
+                    <div className="pt-4 border-t border-white/5">
+                        <h3 className="text-sm font-semibold text-purple-400 uppercase tracking-wider mb-4">Configuração Facebook (Opcional)</h3>
+                        <div className="grid grid-cols-1 gap-6">
+                            <div>
+                                <label htmlFor="id_pagina_facebook" className="block text-sm font-medium text-slate-300 mb-2">
+                                    ID da Página do Facebook
+                                </label>
+                                <input
+                                    {...register('id_pagina_facebook')}
+                                    type="text"
+                                    id="id_pagina_facebook"
+                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500"
+                                    placeholder="ID da página vinculada"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="token_facebook" className="block text-sm font-medium text-slate-300 mb-2">
+                                    Token do Facebook
+                                </label>
+                                <textarea
+                                    {...register('token_facebook')}
+                                    id="token_facebook"
+                                    rows={3}
+                                    className="w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-slate-500 font-mono text-sm"
+                                    placeholder="Token de acesso da página"
+                                />
+                            </div>
+                        </div>
+                        <p className="mt-2 text-[10px] text-slate-500 italic">
+                            Preencha estes campos apenas se o cliente possuir postagem no Facebook/Instagram vinculados.
+                        </p>
+                    </div>
+
                     {error && (
                         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                             <p className="text-sm text-red-300">{error}</p>
