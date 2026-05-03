@@ -254,11 +254,18 @@ export default function NovoConteudoPage() {
                                 </div>
                             ) : (
                                 <div className="relative group rounded-lg overflow-hidden border border-slate-700">
-                                    {storiesFile?.type.startsWith('video') ? (
-                                        <video src={storiesPreview} className="w-full h-40 object-cover" controls />
-                                    ) : (
-                                        <img src={storiesPreview} className="w-full h-40 object-cover" />
-                                    )}
+                                    {(() => {
+                                        const isVideo = storiesFile?.type.startsWith('video') || 
+                                                       /\.(mp4|mov|webm|avi|m4v)(\?.*)?$/i.test(storiesPreview) ||
+                                                       storiesPreview.toLowerCase().includes('video');
+                                        
+                                        if (isVideo) {
+                                            return <video src={storiesPreview} className="w-full h-40 object-cover" controls />;
+                                        }
+                                        return (
+                                            <img src={storiesPreview} className="w-full h-40 object-cover" alt="Preview" />
+                                        );
+                                    })()}
                                     <button onClick={() => removeFile('stories')} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full">
                                         <X className="h-3 w-3" />
                                     </button>
