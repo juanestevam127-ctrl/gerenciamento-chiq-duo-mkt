@@ -38,9 +38,7 @@ export async function PUT(
         const body = await request.json();
         console.log(`API PUT /api/conteudos/${id}: Updating content with body:`, JSON.stringify(body, null, 2));
 
-        const updateData: any = {
-            updated_at: new Date().toISOString(),
-        };
+        const updateData: any = {};
 
         // Only update fields that are provided in the body
         // We use !== undefined to allow explicit null values (to clear a field)
