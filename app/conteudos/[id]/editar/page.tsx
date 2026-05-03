@@ -57,6 +57,7 @@ export default function EditarConteudoPage({
                     const data = await response.json();
                     setValue("data_postagem", data.data_postagem);
                     setValue("descricao", data.descricao || "");
+                    if (data.id_instagram) setValue("id_instagram", data.id_instagram);
 
                     if (data.imagem_estatica) {
                         setExistingStaticUrl(data.imagem_estatica);
@@ -138,7 +139,9 @@ export default function EditarConteudoPage({
     };
 
     const uploadFile = async (file: File): Promise<string> => {
-        const fileName = `${Date.now()}_${file.name}`;
+        // Sanitize file name: remove special characters and spaces
+        const sanitizedName = file.name.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
+        const fileName = `${Date.now()}_${sanitizedName}`;
         const { error: uploadError } = await supabase.storage
             .from(STORAGE_BUCKET)
             .upload(fileName, file);
@@ -207,7 +210,7 @@ export default function EditarConteudoPage({
                 router.push("/conteudos");
             } else {
                 const result = await response.json();
-                setError(result.error || "Erro ao atualizar conteúdo");
+                setError(result.details ? `${result.error}: ${result.details}` : (result.error || "Erro ao atualizar conteúdo"));
             }
         } catch (err: any) {
             setError(err.message || "Erro ao atualizar conteúdo. Tente novamente.");
@@ -326,7 +329,11 @@ export default function EditarConteudoPage({
                                 </div>
                             ) : (
                                 <div className="relative group rounded-lg overflow-hidden border border-slate-700">
-                                    <video src={storiesPreview} className="w-full h-40 object-cover" controls />
+                                    {(storiesFile?.type.startsWith('video') || storiesPreview.includes('.mp4') || storiesPreview.includes('video')) ? (
+                                        <video src={storiesPreview} className="w-full h-40 object-cover" controls />
+                                    ) : (
+                                        <img src={storiesPreview} className="w-full h-40 object-cover" />
+                                    )}
                                     <button onClick={() => removeFile('stories')} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full">
                                         <X className="h-3 w-3" />
                                     </button>
@@ -366,8 +373,9 @@ export default function EditarConteudoPage({
                     </div>
 
                     {error && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                            <p className="text-sm text-red-300">{error}</p>
+                        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                            <p className="text-sm text-red-300 font-medium">Erro:</p>
+                            <p className="text-xs text-red-400/90 mt-1">{error}</p>
                         </div>
                     )}
 

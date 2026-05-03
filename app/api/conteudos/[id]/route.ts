@@ -38,32 +38,44 @@ export async function PUT(
         const body = await request.json();
         console.log(`API PUT /api/conteudos/${id}: Updating content with body:`, JSON.stringify(body, null, 2));
 
+        const updateData: any = {
+            updated_at: new Date().toISOString(),
+        };
+
+        // Only update fields that are provided in the body
+        // We use !== undefined to allow explicit null values (to clear a field)
+        if (body.data_postagem !== undefined) updateData.data_postagem = body.data_postagem;
+        if (body.descricao !== undefined) updateData.descricao = body.descricao;
+        if (body.imagem_estatica !== undefined) updateData.imagem_estatica = body.imagem_estatica;
+        if (body.carrossel !== undefined) updateData.carrossel = body.carrossel;
+        if (body.reels !== undefined) updateData.reels = body.reels;
+        if (body.stories !== undefined) updateData.stories = body.stories;
+        if (body.id_instagram !== undefined) updateData.id_instagram = body.id_instagram;
+
         const { data, error } = await supabase
             .from('Conteúdos Chiquinho Sorvetes')
-            .update({
-                data_postagem: body.data_postagem,
-                descricao: body.descricao || null,
-                imagem_estatica: body.imagem_estatica || null,
-                carrossel: body.carrossel || null,
-                reels: body.reels || null,
-                stories: body.stories || null,
-                id_instagram: body.id_instagram || null,
-                updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
 
         if (error) {
             console.error('Supabase error updating content:', error);
-            throw error;
+            return NextResponse.json(
+                { 
+                    error: 'Erro ao atualizar conteúdo no banco de dados', 
+                    details: error.message,
+                    code: error.code
+                },
+                { status: 500 }
+            );
         }
 
         return NextResponse.json(data);
     } catch (error: any) {
         console.error('Error updating content:', error);
         return NextResponse.json(
-            { error: 'Erro ao atualizar conteúdo' },
+            { error: 'Erro ao atualizar conteúdo', details: error.message },
             { status: 500 }
         );
     }
