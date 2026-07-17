@@ -243,7 +243,8 @@ export default function NovoConteudoPage() {
                                     </button>
                                 </div>
                             )}
-                        <                        {/* Stories Section */}
+                        </div>
+                        {/* Stories Section */}
                         <div className="glass-card p-4 rounded-xl border border-white/5 space-y-4">
                             <div className="flex justify-between items-center">
                                 <h3 className="text-sm font-bold text-pink-400 uppercase tracking-wider">Stories</h3>
