@@ -19,13 +19,13 @@ export default function NovoConteudoPage() {
     const [staticFile, setStaticFile] = useState<File | null>(null);
     const [carouselFiles, setCarouselFiles] = useState<File[]>([]);
     const [reelsFile, setReelsFile] = useState<File | null>(null);
-    const [storiesFile, setStoriesFile] = useState<File | null>(null);
+    const [storiesFiles, setStoriesFiles] = useState<File[]>([]);
 
     // Previews
     const [staticPreview, setStaticPreview] = useState<string>('');
     const [carouselPreviews, setCarouselPreviews] = useState<string[]>([]);
     const [reelsPreview, setReelsPreview] = useState<string>('');
-    const [storiesPreview, setStoriesPreview] = useState<string>('');
+    const [storiesPreviews, setStoriesPreviews] = useState<string[]>([]);
 
     const {
         register,
@@ -50,8 +50,9 @@ export default function NovoConteudoPage() {
             setReelsFile(selectedFiles[0]);
             setReelsPreview(URL.createObjectURL(selectedFiles[0]));
         } else if (type === 'stories') {
-            setStoriesFile(selectedFiles[0]);
-            setStoriesPreview(URL.createObjectURL(selectedFiles[0]));
+            setStoriesFiles(prev => [...prev, ...selectedFiles]);
+            const newPreviews = selectedFiles.map(file => URL.createObjectURL(file));
+            setStoriesPreviews(prev => [...prev, ...newPreviews]);
         }
     };
 
@@ -65,9 +66,9 @@ export default function NovoConteudoPage() {
         } else if (type === 'reels') {
             setReelsFile(null);
             setReelsPreview('');
-        } else if (type === 'stories') {
-            setStoriesFile(null);
-            setStoriesPreview('');
+        } else if (type === 'stories' && index !== undefined) {
+            setStoriesFiles(prev => prev.filter((_, i) => i !== index));
+            setStoriesPreviews(prev => prev.filter((_, i) => i !== index));
         }
     };
 
@@ -89,7 +90,7 @@ export default function NovoConteudoPage() {
     };
 
     const onSubmit = async (data: ConteudoFormData) => {
-        if (!staticFile && carouselFiles.length === 0 && !reelsFile && !storiesFile) {
+        if (!staticFile && carouselFiles.length === 0 && !reelsFile && storiesFiles.length === 0) {
             setError('Por favor, selecione pelo menos um arquivo em qualquer uma das categorias');
             return;
         }
@@ -126,8 +127,11 @@ export default function NovoConteudoPage() {
             }
 
             // Upload stories
-            if (storiesFile) {
-                contentData.stories = await uploadFile(storiesFile);
+            if (storiesFiles.length > 0) {
+                const uploadPromises = storiesFiles.map(file => uploadFile(file));
+                const urls = await Promise.all(uploadPromises);
+                // Save multiple stories urls as stringified JSON array
+                contentData.stories = JSON.stringify(urls);
             }
 
             const response = await fetch('/api/conteudos', {
@@ -239,36 +243,41 @@ export default function NovoConteudoPage() {
                                     </button>
                                 </div>
                             )}
-                        </div>
-
-                        {/* Stories Section */}
+                        <                        {/* Stories Section */}
                         <div className="glass-card p-4 rounded-xl border border-white/5 space-y-4">
-                            <h3 className="text-sm font-bold text-pink-400 uppercase tracking-wider">Stories</h3>
-                            {!storiesPreview ? (
-                                <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-pink-500/50 transition-all">
-                                    <input type="file" accept="image/*,video/*" onChange={(e) => handleFileChange('stories', e)} className="hidden" id="stories-up" />
-                                    <label htmlFor="stories-up" className="cursor-pointer block">
-                                        <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
-                                        <span className="text-xs text-slate-400">Clique para subir</span>
-                                    </label>
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-sm font-bold text-pink-400 uppercase tracking-wider">Stories</h3>
+                                <div className="text-[10px] bg-pink-500/20 text-pink-300 px-2 py-0.5 rounded-full border border-pink-500/30">
+                                    {storiesFiles.length} arquivos
                                 </div>
-                            ) : (
-                                <div className="relative group rounded-lg overflow-hidden border border-slate-700">
-                                    {(() => {
-                                        const isVideo = storiesFile?.type.startsWith('video') || 
-                                                       /\.(mp4|mov|webm|avi|m4v)(\?.*)?$/i.test(storiesPreview) ||
-                                                       storiesPreview.toLowerCase().includes('video');
-                                        
-                                        if (isVideo) {
-                                            return <video src={storiesPreview} className="w-full h-40 object-cover" controls />;
-                                        }
+                            </div>
+                            <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-pink-500/50 transition-all">
+                                <input type="file" accept="image/*,video/*" multiple onChange={(e) => handleFileChange('stories', e)} className="hidden" id="stories-up" />
+                                <label htmlFor="stories-up" className="cursor-pointer block">
+                                    <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
+                                    <span className="text-xs text-slate-400">Adicionar stories</span>
+                                </label>
+                            </div>
+                            {storiesPreviews.length > 0 && (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {storiesPreviews.map((p, idx) => {
+                                        const file = storiesFiles[idx];
+                                        const isVideo = file?.type.startsWith('video') || 
+                                                        /\.(mp4|mov|webm|avi|m4v)(\?.*)?$/i.test(p);
                                         return (
-                                            <img src={storiesPreview} className="w-full h-40 object-cover" alt="Preview" />
+                                            <div key={idx} className="relative group aspect-[9/16] rounded border border-slate-700 overflow-hidden">
+                                                {isVideo ? (
+                                                    <video src={p} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <img src={p} className="w-full h-full object-cover" alt="Preview" />
+                                                )}
+                                                <button type="button" onClick={() => removeFile('stories', idx)} className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full">
+                                                    <X className="h-2 w-2" />
+                                                </button>
+                                                <span className="absolute bottom-1 left-1 text-[8px] bg-black/60 px-1 rounded">{idx + 1}</span>
+                                            </div>
                                         );
-                                    })()}
-                                    <button onClick={() => removeFile('stories')} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full">
-                                        <X className="h-3 w-3" />
-                                    </button>
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -282,23 +291,32 @@ export default function NovoConteudoPage() {
                                 </div>
                             </div>
                             <div className="border border-dashed border-slate-600 rounded-lg p-4 text-center hover:border-blue-500/50 transition-all">
-                                <input type="file" accept="image/*" multiple onChange={(e) => handleFileChange('carrossel', e)} className="hidden" id="carousel-up" />
+                                <input type="file" accept="image/*,video/*" multiple onChange={(e) => handleFileChange('carrossel', e)} className="hidden" id="carousel-up" />
                                 <label htmlFor="carousel-up" className="cursor-pointer block">
                                     <Upload className="h-8 w-8 text-slate-500 mx-auto mb-2" />
-                                    <span className="text-xs text-slate-400">Adicionar imagens</span>
+                                    <span className="text-xs text-slate-400">Adicionar mídias</span>
                                 </label>
                             </div>
                             {carouselPreviews.length > 0 && (
                                 <div className="grid grid-cols-4 gap-2">
-                                    {carouselPreviews.map((p, idx) => (
-                                        <div key={idx} className="relative group aspect-square rounded border border-slate-700 overflow-hidden">
-                                            <img src={p} className="w-full h-full object-cover" />
-                                            <button onClick={() => removeFile('carrossel', idx)} className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full">
-                                                <X className="h-2 w-2" />
-                                            </button>
-                                            <span className="absolute bottom-1 left-1 text-[8px] bg-black/60 px-1 rounded">{idx + 1}</span>
-                                        </div>
-                                    ))}
+                                    {carouselPreviews.map((p, idx) => {
+                                        const file = carouselFiles[idx];
+                                        const isVideo = file?.type.startsWith('video') || 
+                                                        /\.(mp4|mov|webm|avi|m4v)(\?.*)?$/i.test(p);
+                                        return (
+                                            <div key={idx} className="relative group aspect-square rounded border border-slate-700 overflow-hidden">
+                                                {isVideo ? (
+                                                    <video src={p} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <img src={p} className="w-full h-full object-cover" />
+                                                )}
+                                                <button type="button" onClick={() => removeFile('carrossel', idx)} className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full">
+                                                    <X className="h-2 w-2" />
+                                                </button>
+                                                <span className="absolute bottom-1 left-1 text-[8px] bg-black/60 px-1 rounded">{idx + 1}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
