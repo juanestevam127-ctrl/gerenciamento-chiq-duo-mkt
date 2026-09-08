@@ -55,9 +55,17 @@ export default function DashboardPage() {
             });
             const res = await fetch(`/api/dashboard/data?${params}`);
             const jsonData = await res.json();
-            setData(jsonData);
+            
+            if (jsonData.error) {
+                console.error("API Error:", jsonData.error, jsonData.details);
+                setData({ clientes: [], conteudos: [], postagens: [] });
+                // We could also set an error state here to show to the user
+            } else {
+                setData(jsonData);
+            }
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
+            setData({ clientes: [], conteudos: [], postagens: [] });
         } finally {
             setIsLoading(false);
         }
@@ -65,7 +73,7 @@ export default function DashboardPage() {
 
     // --- LOGIC CORE ---
     const processedData = useMemo(() => {
-        if (!data.clientes.length) return null;
+        if (!data?.clientes?.length) return null;
 
         const days = eachDayOfInterval({
             start: parseLocalDate(dateRange.start) || new Date(),
