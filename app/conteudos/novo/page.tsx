@@ -148,7 +148,8 @@ export default function NovoConteudoPage() {
             }
         } catch (err: any) {
             console.error(err);
-            setError('Erro ao criar conteúdo. Tente novamente.');
+            // Melhorar a mensagem de erro para capturar problemas do Storage
+            setError(err.message ? `Erro: ${err.message}` : 'Erro ao criar conteúdo. Tente novamente.');
         } finally {
             setIsLoading(false);
         }
