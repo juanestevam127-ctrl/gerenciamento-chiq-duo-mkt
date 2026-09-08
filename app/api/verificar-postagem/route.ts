@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
         // Fetch client info
         const { data: cliente, error: clienteError } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .select('*')
             .eq('id_instagram', id_instagram)
             .single();
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
         // Fetch postagens for this client/date
         const { data: postagens, error: postagensError } = await supabase
-            .from('Controle de Postagens - Clientes Chiquinho')
+            .from('chiquinho_sorvetes_controle_postagens')
             .select('*')
             .eq('id_instagram', id_instagram)
             .eq('data_postagem', date);

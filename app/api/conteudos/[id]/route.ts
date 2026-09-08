@@ -12,7 +12,7 @@ export async function GET(
         const { id } = await params;
 
         const { data, error } = await supabase
-            .from('Conteúdos Chiquinho Sorvetes')
+            .from('chiquinho_sorvetes_conteudos')
             .select('*')
             .eq('id', id)
             .single();
@@ -51,7 +51,7 @@ export async function PUT(
         if (body.id_instagram !== undefined) updateData.id_instagram = body.id_instagram;
 
         const { data, error } = await supabase
-            .from('Conteúdos Chiquinho Sorvetes')
+            .from('chiquinho_sorvetes_conteudos')
             .update(updateData)
             .eq('id', id)
             .select()
@@ -88,7 +88,7 @@ export async function DELETE(
         const { id } = await params;
 
         const { error } = await supabase
-            .from('Conteúdos Chiquinho Sorvetes')
+            .from('chiquinho_sorvetes_conteudos')
             .delete()
             .eq('id', id);
 

@@ -6,7 +6,7 @@ export async function GET() {
     try {
         console.log('API GET /api/clientes: Fetching from Supabase...');
         const { data, error } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .select('*')
             .order('created_at', { ascending: false });
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         const { data, error } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .insert([{
                 nome_cliente: body.nome_cliente,
                 username_instagram: body.username_instagram,

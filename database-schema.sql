@@ -1,5 +1,5 @@
 -- Tabela: Clientes Chiquinho
-CREATE TABLE IF NOT EXISTS "Clientes Chiquinho" (
+CREATE TABLE IF NOT EXISTS "chiquinho_sorvetes_clientes" (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nome_cliente TEXT NOT NULL,
   username_instagram TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS "Clientes Chiquinho" (
 );
 
 -- Tabela: Conteúdos Chiquinho Sorvetes
-CREATE TABLE IF NOT EXISTS "Conteúdos Chiquinho Sorvetes" (
+CREATE TABLE IF NOT EXISTS "chiquinho_sorvetes_conteudos" (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   data_postagem DATE NOT NULL,
   descricao TEXT,
@@ -19,18 +19,18 @@ CREATE TABLE IF NOT EXISTS "Conteúdos Chiquinho Sorvetes" (
   carrossel JSONB,
   reels TEXT,
   stories TEXT,
-  id_instagram TEXT REFERENCES "Clientes Chiquinho"(id_instagram) ON DELETE CASCADE,
+  id_instagram TEXT REFERENCES "chiquinho_sorvetes_clientes"(id_instagram) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Tabela: Controle de Postagens - Clientes Chiquinho
-CREATE TABLE IF NOT EXISTS "Controle de Postagens - Clientes Chiquinho" (
+CREATE TABLE IF NOT EXISTS "chiquinho_sorvetes_controle_postagens" (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   data_postagem DATE NOT NULL,
-  id_instagram TEXT NOT NULL REFERENCES "Clientes Chiquinho"(id_instagram) ON DELETE CASCADE,
+  id_instagram TEXT NOT NULL REFERENCES "chiquinho_sorvetes_clientes"(id_instagram) ON DELETE CASCADE,
   tipo_postagem TEXT NOT NULL CHECK (tipo_postagem IN ('FEED', 'STORIES')),
-  conteudo_id UUID REFERENCES "Conteúdos Chiquinho Sorvetes"(id) ON DELETE SET NULL,
+  conteudo_id UUID REFERENCES "chiquinho_sorvetes_conteudos"(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

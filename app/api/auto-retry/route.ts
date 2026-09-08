@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
         // 1. Fetch all clients with a schedule
         const { data: clientes, error: clientesError } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .select('*')
             .not('horario_postagem', 'is', null)
             .not('webhook', 'is', null);
@@ -45,11 +45,11 @@ export async function POST(request: NextRequest) {
         // 2. Fetch today's postagens and scheduled content
         const [postagensResult, contentsResult] = await Promise.all([
             supabase
-                .from('Controle de Postagens - Clientes Chiquinho')
+                .from('chiquinho_sorvetes_controle_postagens')
                 .select('*')
                 .eq('data_postagem', today),
             supabase
-                .from('Conteúdos Chiquinho Sorvetes')
+                .from('chiquinho_sorvetes_conteudos')
                 .select('id_instagram')
                 .eq('data_postagem', today)
         ]);

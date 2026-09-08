@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
         console.log('API GET /api/postagens: Fetching...', { cliente_id, startDate, endDate });
 
         let query = supabase
-            .from('Controle de Postagens - Clientes Chiquinho')
+            .from('chiquinho_sorvetes_controle_postagens')
             .select(`
                 *,
                 cliente:id_instagram (
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
             // If no explicit conteudo_id or missing descricao, try to find by date and account
             const { data: contentData } = await supabase
-                .from('Conteúdos Chiquinho Sorvetes')
+                .from('chiquinho_sorvetes_conteudos')
                 .select('descricao')
                 .eq('data_postagem', post.data_postagem)
                 .or(`id_instagram.eq.${post.id_instagram},id_instagram.is.null`)

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
         // 1. Fetch ALL Clients
         const { data: clientes, error: clientesError } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .select('*')
             .order('nome_cliente');
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         // User logic: "Verificar se existe registro na tabela Controle... E verificar se tem conteúdo disponível na tabela Conteúdos"
         // So we just fetch all content for the date range.
         const { data: conteudos, error: conteudosError } = await supabase
-            .from('Conteúdos Chiquinho Sorvetes')
+            .from('chiquinho_sorvetes_conteudos')
             .select('*')
             .gte('data_postagem', targetStartDate)
             .lte('data_postagem', targetEndDate);
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
         // 3. Fetch Posts (Controle) for the period
         const { data: postagens, error: postagensError } = await supabase
-            .from('Controle de Postagens - Clientes Chiquinho')
+            .from('chiquinho_sorvetes_controle_postagens')
             .select('*')
             .gte('data_postagem', targetStartDate)
             .lte('data_postagem', targetEndDate);

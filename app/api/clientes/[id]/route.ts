@@ -10,7 +10,7 @@ export async function GET(
         const { id } = await params;
 
         const { data, error } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .select('*')
             .eq('id', id)
             .single();
@@ -36,7 +36,7 @@ export async function PUT(
         const body = await request.json();
 
         const { data, error } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .update({
                 nome_cliente: body.nome_cliente,
                 username_instagram: body.username_instagram,
@@ -72,7 +72,7 @@ export async function DELETE(
         const { id } = await params;
 
         const { error } = await supabase
-            .from('Clientes Chiquinho')
+            .from('chiquinho_sorvetes_clientes')
             .delete()
             .eq('id', id);
 

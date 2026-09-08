@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
         }
 
         const { data, error } = await supabase
-            .from('Controle de Postagens - Clientes Chiquinho')
+            .from('chiquinho_sorvetes_controle_postagens')
             .select('*')
             .eq('data_postagem', date);
 

@@ -8,7 +8,7 @@ export async function GET() {
     try {
         console.log('API GET /api/conteudos: Fetching from Supabase...');
         const { data, error } = await supabase
-            .from('Conteúdos Chiquinho Sorvetes')
+            .from('chiquinho_sorvetes_conteudos')
             .select('*')
             .order('data_postagem', { ascending: false });
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         if (body.id_instagram) payload.id_instagram = body.id_instagram;
 
         const { data, error } = await supabase
-            .from('Conteúdos Chiquinho Sorvetes')
+            .from('chiquinho_sorvetes_conteudos')
             .insert([payload])
             .select();
 
