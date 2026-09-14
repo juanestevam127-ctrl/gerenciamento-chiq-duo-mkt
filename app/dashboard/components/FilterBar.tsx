@@ -36,18 +36,18 @@ export function FilterBar({ onFilterChange, isLoading }: FilterBarProps) {
     };
 
     return (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-2 flex items-center gap-4 relative z-20">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/50 rounded text-sm text-slate-300">
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 relative z-20">
+            <div className="flex items-center gap-2 px-3 py-2 sm:py-1.5 bg-slate-900/50 rounded text-sm text-slate-300 justify-center sm:justify-start">
                 <Filter className="w-4 h-4" />
                 <span>Filtro:</span>
                 <span className="font-medium text-white">{selectedLabel}</span>
             </div>
 
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
                     disabled={isLoading}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors text-sm font-medium disabled:opacity-50"
+                    className="flex items-center justify-center sm:justify-start gap-2 w-full sm:w-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors text-sm font-medium disabled:opacity-50"
                 >
                     <CalendarIcon className="w-4 h-4" />
                     Selecionar Período
@@ -55,7 +55,7 @@ export function FilterBar({ onFilterChange, isLoading }: FilterBarProps) {
                 </button>
 
                 {isOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 flex flex-col gap-2">
+                    <div className="absolute top-full right-0 mt-2 w-full sm:w-72 min-w-[280px] bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4 flex flex-col gap-2 z-50 origin-top">
                         <h3 className="text-xs font-semibold text-slate-400 uppercase mb-1">Períodos Rápidos</h3>
                         <button onClick={() => handlePreset('Hoje', today, today)} className="text-left px-3 py-2 rounded hover:bg-slate-700 text-sm text-slate-200">Hoje</button>
                         <button onClick={() => handlePreset('Ontem', subDays(today, 1), subDays(today, 1))} className="text-left px-3 py-2 rounded hover:bg-slate-700 text-sm text-slate-200">Ontem</button>
