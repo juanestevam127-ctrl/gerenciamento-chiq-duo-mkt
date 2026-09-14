@@ -261,7 +261,7 @@ export default function DashboardPage() {
                         <p className="text-slate-300 text-xs mt-1">
                             Os seguintes clientes precisam ter o token renovado este mês: 
                             <strong className="text-white ml-1">
-                                {expiredTokens.map(c => c.nome_cliente).join(', ')}
+                                {expiredTokens.map(c => c.username_instagram ? `@${c.username_instagram}` : c.nome_cliente).join(', ')}
                             </strong>
                         </p>
                     </div>
@@ -281,7 +281,7 @@ export default function DashboardPage() {
                         </span>
                     </p>
                 </div>
-                <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                <div className="w-full sm:w-auto">
                     <FilterBar
                         onFilterChange={(start, end, label) => setDateRange({ start, end, label })}
                         isLoading={isLoading}
