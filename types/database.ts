@@ -8,6 +8,7 @@ export interface Cliente {
     webhook?: string;
     id_pagina_facebook?: string;
     token_facebook?: string;
+    data_atualizacao_token?: string;
     created_at: string;
     updated_at: string;
 }

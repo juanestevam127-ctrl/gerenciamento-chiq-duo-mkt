@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { format, isSameDay, isAfter, isBefore, parseISO, eachDayOfInterval, addMinutes, startOfDay } from 'date-fns';
+import { format, isSameDay, isAfter, isBefore, parseISO, eachDayOfInterval, addMinutes, startOfDay, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { FilterBar } from './components/FilterBar';
+import { AlertCircle } from 'lucide-react';
 import { KPICards } from './components/KPICards';
 import { StatusChart } from './components/StatusChart';
 import { HistoryChart } from './components/HistoryChart';
@@ -238,8 +239,35 @@ export default function DashboardPage() {
             });
     }, [processedData, mounted]);
 
+    const expiredTokens = useMemo(() => {
+        if (!data?.clientes) return [];
+        const currentMonthStart = startOfMonth(new Date());
+        return data.clientes.filter(cliente => {
+            if (!cliente.data_atualizacao_token) return true;
+            const dataToken = parseISO(cliente.data_atualizacao_token);
+            return isBefore(dataToken, currentMonthStart);
+        });
+    }, [data.clientes]);
+
     return (
         <div className="min-h-screen bg-transparent text-white pb-20">
+            {expiredTokens.length > 0 && (
+                <div className="mb-6 bg-red-500/20 border border-red-500/50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="p-2 bg-red-500/20 rounded-full shrink-0">
+                        <AlertCircle className="w-5 h-5 text-red-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-red-400 font-medium text-sm">Atenção: Renovação de Token Pendente</h3>
+                        <p className="text-slate-300 text-xs mt-1">
+                            Os seguintes clientes precisam ter o token renovado este mês: 
+                            <strong className="text-white ml-1">
+                                {expiredTokens.map(c => c.nome_cliente).join(', ')}
+                            </strong>
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div className="w-full sm:w-auto">
                     <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
