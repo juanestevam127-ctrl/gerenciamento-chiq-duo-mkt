@@ -154,20 +154,38 @@ export default function EditarConteudoPage({
     };
 
     const uploadFile = async (file: File): Promise<string> => {
-        // Sanitize file name: remove special characters and spaces
-        const sanitizedName = file.name.replace(/[^\x00-\x7F]/g, "").replace(/\s+/g, "_");
-        const fileName = `${Date.now()}_${sanitizedName}`;
-        const { error: uploadError } = await supabase.storage
-            .from(STORAGE_BUCKET)
-            .upload(fileName, file);
+        // Step 1: Get presigned URL from our backend
+        const response = await fetch('/api/upload-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                filename: file.name,
+                contentType: file.type || 'application/octet-stream'
+            })
+        });
 
-        if (uploadError) throw uploadError;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Erro ao gerar link de upload');
+        }
 
-        const { data } = supabase.storage
-            .from(STORAGE_BUCKET)
-            .getPublicUrl(fileName);
+        const { presignedUrl, finalUrl } = await response.json();
 
-        return data.publicUrl;
+        // Step 2: Upload file directly to Cloudflare R2 using the presigned URL
+        const uploadResponse = await fetch(presignedUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+            },
+            body: file
+        });
+
+        if (!uploadResponse.ok) {
+            throw new Error('Erro ao fazer upload do arquivo para o storage (R2)');
+        }
+
+        // Step 3: Return the final public URL
+        return finalUrl;
     };
 
     const onSubmit = async (data: ConteudoFormData) => {
