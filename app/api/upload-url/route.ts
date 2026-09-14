@@ -10,6 +10,8 @@ const s3Client = new S3Client({
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
     },
     forcePathStyle: true, // Required for Cloudflare R2 CORS to work perfectly
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
 });
 
 export async function POST(request: NextRequest) {
