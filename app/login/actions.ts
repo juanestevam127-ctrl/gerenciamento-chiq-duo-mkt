@@ -17,7 +17,8 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    return { error: 'E-mail ou senha inválidos' }
+    console.error('Supabase signInWithPassword error:', error)
+    return { error: error.message || 'E-mail ou senha inválidos' }
   }
 
   revalidatePath('/', 'layout')

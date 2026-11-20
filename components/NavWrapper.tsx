@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import MobileHeader from "@/components/MobileHeader";
 
@@ -10,6 +11,11 @@ interface NavWrapperProps {
 
 export default function NavWrapper({ children }: NavWrapperProps) {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const pathname = usePathname();
+
+    if (pathname === '/login') {
+        return <main className="w-full min-h-screen bg-[#020617]">{children}</main>;
+    }
 
     return (
         <div className="flex h-[100dvh] w-full overflow-hidden bg-[#020617] relative">
