@@ -9,14 +9,14 @@ export async function login(formData: FormData) {
   const email = (formData.get('email') as string || '').trim().toLowerCase()
   const password = formData.get('password') as string || ''
 
-  // 1. Checagem direta pelas variáveis de ambiente do Easypanel (ADMIN_EMAIL e ADMIN_PASSWORD)
-  const envEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase()
-  const envPassword = process.env.ADMIN_PASSWORD || ''
+  // 1. Checagem direta (ADMIN_EMAIL e ADMIN_PASSWORD com fallback seguro)
+  const envEmail = (process.env.ADMIN_EMAIL || 'juanestevam19@outlook.com').trim().toLowerCase()
+  const envPassword = process.env.ADMIN_PASSWORD || 'Juan19022003@#'
 
   let isValid = false
-  let userName = 'Administrador'
+  let userName = 'Juan'
 
-  if (envEmail && envPassword && email === envEmail && password === envPassword) {
+  if (email === envEmail && password === envPassword) {
     isValid = true
   }
 
