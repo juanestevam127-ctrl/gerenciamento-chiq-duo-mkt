@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 export async function POST() {
-    const supabase = await createClient();
-    await supabase.auth.signOut();
+    const cookieStore = await cookies();
+    cookieStore.delete('chiquinho_auth');
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    response.cookies.delete('chiquinho_auth');
+
+    return response;
 }

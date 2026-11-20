@@ -27,27 +27,33 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // 1. Checa a sessão simples por cookie
+  const authCookie = request.cookies.get('chiquinho_auth')?.value
+  let isAuthenticated = !!authCookie
+
+  // 2. Se não achou cookie, checa se ainda há sessão legada do Supabase
+  if (!isAuthenticated) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) isAuthenticated = true
+    } catch {
+      // Ignora erro
+    }
+  }
 
   // Proteger todas as rotas exceto /login, /api e rotas estáticas
   if (
-    !user &&
+    !isAuthenticated &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/api')
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
   // Se o usuário estiver logado e tentar acessar /login, redireciona para o painel
-  if (user && request.nextUrl.pathname === '/login') {
+  if (isAuthenticated && request.nextUrl.pathname === '/login') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
