@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { Cliente, Conteudo, ControlePostagem } from '@/types/database';
+import { nocodb } from '@/lib/nocodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,53 +10,31 @@ export async function GET(request: NextRequest) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
 
-        // Logic:
-        // If 'date' is provided, we fetch data for that specific day.
-        // If range is provided, we fetch for the range.
-        // Default to today if nothing provided.
-
         const targetStartDate = startDate || date || new Date().toISOString().split('T')[0];
         const targetEndDate = endDate || date || new Date().toISOString().split('T')[0];
 
-        console.log(`API GET /api/dashboard/data: Fetching for ${targetStartDate} to ${targetEndDate}`);
+        console.log(`API GET /api/dashboard/data: Fetching for ${targetStartDate} to ${targetEndDate} from NocoDB...`);
 
-        // 1. Fetch ALL Clients
-        const { data: clientes, error: clientesError } = await supabase
-            .from('chiquinho_sorvetes_clientes')
-            .select('*')
-            .order('nome_cliente');
+        // Fetch in parallel: clients, content for date range, and posts for date range
+        const [clientes, conteudos, postagens] = await Promise.all([
+            nocodb.clientes.list(),
+            nocodb.conteudos.list({
+                startDate: targetStartDate,
+                endDate: targetEndDate,
+            }),
+            nocodb.controlePostagens.list({
+                startDate: targetStartDate,
+                endDate: targetEndDate,
+            }),
+        ]);
 
-        if (clientesError) throw clientesError;
-
-        // 2. Fetch Content for the period
-        // Note: We need content that matches the date link OR if it's generic (id_instagram is null? No, user wants per client)
-        // User logic: "Verificar se existe registro na tabela Controle... E verificar se tem conteúdo disponível na tabela Conteúdos"
-        // So we just fetch all content for the date range.
-        const { data: conteudos, error: conteudosError } = await supabase
-            .from('chiquinho_sorvetes_conteudos')
-            .select('*')
-            .gte('data_postagem', targetStartDate)
-            .lte('data_postagem', targetEndDate);
-
-        if (conteudosError) throw conteudosError;
-
-        // 3. Fetch Posts (Controle) for the period
-        const { data: postagens, error: postagensError } = await supabase
-            .from('chiquinho_sorvetes_controle_postagens')
-            .select('*')
-            .gte('data_postagem', targetStartDate)
-            .lte('data_postagem', targetEndDate);
-
-        if (postagensError) throw postagensError;
-
-        console.log(`Fetched: ${clientes?.length} clients, ${conteudos?.length} contents, ${postagens?.length} posts`);
+        console.log(`API GET /api/dashboard/data: Success! Clientes: ${clientes.length}, Conteudos: ${conteudos.length}, Postagens: ${postagens.length}`);
 
         return NextResponse.json({
-            clientes: clientes || [],
-            conteudos: conteudos || [],
-            postagens: postagens || []
+            clientes,
+            conteudos,
+            postagens,
         });
-
     } catch (error: any) {
         console.error('Error in dashboard data API:', error);
         return NextResponse.json(

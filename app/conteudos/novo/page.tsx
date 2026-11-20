@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { conteudoSchema, type ConteudoFormData } from '@/lib/validations';
 import { ArrowLeft, Upload, X } from 'lucide-react';
 import Link from 'next/link';
-import { supabase, STORAGE_BUCKET } from '@/lib/supabase';
+// Uploads handled via R2
 import { TipoConteudo, CarouselItem } from '@/types/database';
 
 export default function NovoConteudoPage() {

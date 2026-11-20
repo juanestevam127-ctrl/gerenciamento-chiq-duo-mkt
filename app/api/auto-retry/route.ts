@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { nocodb } from '@/lib/nocodb';
 import { Cliente, ControlePostagem, WebhookRetryLog } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
@@ -23,48 +23,39 @@ function isPostingComplete(postagens: ControlePostagem[], required: TipoPostagem
 
 /** POST /api/auto-retry
  * Checks all clients scheduled for today, finds incomplete postings,
- * and triggers webhooks up to 3 times (every 5 minutes).
+ * and triggers webhooks up to 3 times (every 30 minutes).
  */
 export async function POST(request: NextRequest) {
     try {
         const today = new Date().toISOString().split('T')[0];
         const nowUtc = new Date();
 
-        // 1. Fetch all clients with a schedule
-        const { data: clientes, error: clientesError } = await supabase
-            .from('chiquinho_sorvetes_clientes')
-            .select('*')
-            .not('horario_postagem', 'is', null)
-            .not('webhook', 'is', null);
+        // 1. Fetch all clients from NocoDB
+        const allClients = await nocodb.clientes.list();
+        const clientes = allClients.filter(c => c.horario_postagem && c.webhook);
 
-        if (clientesError) throw clientesError;
         if (!clientes || clientes.length === 0) {
             return NextResponse.json({ message: 'Nenhum cliente configurado', results: [] });
         }
 
-        // 2. Fetch today's postagens and scheduled content
+        // 2. Fetch today's postagens and scheduled content from NocoDB
         const [postagensResult, contentsResult] = await Promise.all([
-            supabase
-                .from('chiquinho_sorvetes_controle_postagens')
-                .select('*')
-                .eq('data_postagem', today),
-            supabase
-                .from('chiquinho_sorvetes_conteudos')
-                .select('id_instagram')
-                .eq('data_postagem', today)
+            nocodb.controlePostagens.list({ date: today }),
+            nocodb.conteudos.list({ date: today }),
         ]);
 
-        if (postagensResult.error) throw postagensResult.error;
-        if (contentsResult.error) throw contentsResult.error;
-
-        const allPostagens: ControlePostagem[] = postagensResult.data || [];
-        const clientsWithContent = new Set((contentsResult.data || []).map(c => c.id_instagram));
+        const allPostagens: ControlePostagem[] = postagensResult || [];
+        const clientsWithContent = new Set(
+            contentsResult.map(c => c.id_instagram).filter(Boolean)
+        );
+        // Note: if there is content for today without specific id_instagram, it applies to all
+        const hasGenericContent = contentsResult.some(c => !c.id_instagram);
 
         const results: any[] = [];
 
-        for (const cliente of clientes as Cliente[]) {
+        for (const cliente of clientes) {
             // 2.1 Check if client has content for today
-            if (!clientsWithContent.has(cliente.id_instagram)) {
+            if (!hasGenericContent && !clientsWithContent.has(cliente.id_instagram)) {
                 results.push({
                     cliente: cliente.nome_cliente,
                     username_instagram: cliente.username_instagram,
@@ -106,21 +97,8 @@ export async function POST(request: NextRequest) {
                 continue;
             }
 
-            // 3. Fetch retry logs for THIS specific client IN REAL TIME
-            // This prevents race conditions where multiple requests see the same cached state
-            const { data: clienteRetries, error: retryError } = await supabase
-                .from('webhook_retry_log')
-                .select('*')
-                .eq('id_instagram', cliente.id_instagram)
-                .eq('data_postagem', today)
-                .order('disparado_em', { ascending: true });
-
-            if (retryError) {
-                console.error(`Error fetching retries for ${cliente.id_instagram}:`, retryError);
-                continue;
-            }
-
-            const logs = clienteRetries || [];
+            // 3. Fetch retry logs for this client
+            const logs = await nocodb.webhookRetryLog.list({ date: today, id_instagram: cliente.id_instagram });
             const tentativasCount = logs.length;
 
             // Max retries reached
@@ -151,9 +129,6 @@ export async function POST(request: NextRequest) {
                     });
                     continue;
                 }
-            } else {
-                // For the first attempt, also ensure we are at least at the scheduled time
-                // (Already checked above, but keep it logic-tight)
             }
 
             // Fire the webhook
@@ -161,9 +136,6 @@ export async function POST(request: NextRequest) {
             let webhookStatus: 'success' | 'failed' = 'failed';
 
             try {
-                // Pre-log to minimize race condition window (optional, but good practice)
-                // For now, we fetch in-loop which is already much safer than before.
-                
                 const webhookRes = await fetch(cliente.webhook!, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -181,13 +153,13 @@ export async function POST(request: NextRequest) {
                 webhookStatus = 'failed';
             }
 
-            // Log the retry attempt
-            await supabase.from('webhook_retry_log').insert({
+            // Log the retry attempt in NocoDB
+            await nocodb.webhookRetryLog.create({
                 id_instagram: cliente.id_instagram,
                 data_postagem: today,
                 tentativa: nextTentativa,
                 disparado_em: nowUtc.toISOString(),
-                status: webhookStatus
+                status: webhookStatus,
             });
 
             results.push({
@@ -199,7 +171,6 @@ export async function POST(request: NextRequest) {
                 faltam: required.filter(t => !clientePostagens.some(p => p.tipo_postagem === t))
             });
         }
-
 
         return NextResponse.json({ success: true, date: today, results });
     } catch (error: any) {

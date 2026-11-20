@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { nocodb } from '@/lib/nocodb';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
@@ -13,16 +15,10 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const { data, error } = await supabase
-            .from('chiquinho_sorvetes_controle_postagens')
-            .select('*')
-            .eq('data_postagem', date);
-
-        if (error) throw error;
-
-        return NextResponse.json(data || []);
+        const data = await nocodb.controlePostagens.list({ date });
+        return NextResponse.json(data);
     } catch (error: any) {
-        console.error('Error fetching control data:', error);
+        console.error('Error fetching control data from NocoDB:', error);
         return NextResponse.json(
             { error: 'Erro ao buscar dados de controle', details: error.message },
             { status: 500 }

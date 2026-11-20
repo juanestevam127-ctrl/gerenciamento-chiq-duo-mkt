@@ -3,11 +3,15 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { supabase } from '@/lib/supabase'
+import { nocodb } from '@/lib/nocodb'
 
 export async function login(formData: FormData) {
   const email = (formData.get('email') as string || '').trim().toLowerCase()
   const password = formData.get('password') as string || ''
+
+  if (!email || !password) {
+    return { error: 'E-mail e senha são obrigatórios' }
+  }
 
   // 1. Checagem direta (ADMIN_EMAIL e ADMIN_PASSWORD com fallback seguro)
   const envEmail = (process.env.ADMIN_EMAIL || 'juanestevam19@outlook.com').trim().toLowerCase()
@@ -20,22 +24,16 @@ export async function login(formData: FormData) {
     isValid = true
   }
 
-  // 2. Se não bateu com o .env, consulta a tabela chiquinho_usuarios no Supabase
+  // 2. Se não bateu com o .env, consulta a tabela chiquinho_usuarios no NocoDB
   if (!isValid) {
     try {
-      const { data, error } = await supabase
-        .from('chiquinho_usuarios')
-        .select('*')
-        .ilike('email', email)
-        .eq('senha', password)
-        .maybeSingle()
-
-      if (!error && data) {
+      const user = await nocodb.usuarios.findByEmail(email)
+      if (user && user.senha === password) {
         isValid = true
-        userName = data.nome || 'Administrador'
+        userName = user.nome || 'Administrador'
       }
     } catch (err) {
-      console.error('Erro ao consultar chiquinho_usuarios:', err)
+      console.error('Erro ao consultar chiquinho_usuarios no NocoDB:', err)
     }
   }
 

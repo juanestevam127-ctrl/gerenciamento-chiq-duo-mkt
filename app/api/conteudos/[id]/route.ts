@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { nocodb } from '@/lib/nocodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,19 +10,20 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
+        const conteudo = await nocodb.conteudos.getById(id);
 
-        const { data, error } = await supabase
-            .from('chiquinho_sorvetes_conteudos')
-            .select('*')
-            .eq('id', id)
-            .single();
+        if (!conteudo) {
+            return NextResponse.json(
+                { error: 'Conteúdo não encontrado' },
+                { status: 404 }
+            );
+        }
 
-        if (error) throw error;
-
-        return NextResponse.json(data);
+        return NextResponse.json(conteudo);
     } catch (error: any) {
+        console.error('Error fetching content:', error);
         return NextResponse.json(
-            { error: 'Erro ao buscar conteúdo' },
+            { error: 'Erro ao buscar conteúdo', details: error.message },
             { status: 500 }
         );
     }
@@ -36,40 +37,18 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await request.json();
-        console.log(`API PUT /api/conteudos/${id}: Updating content with body:`, JSON.stringify(body, null, 2));
 
-        const updateData: any = {};
+        const updated = await nocodb.conteudos.update(id, {
+            data_postagem: body.data_postagem,
+            descricao: body.descricao,
+            imagem_estatica: body.imagem_estatica,
+            carrossel: body.carrossel,
+            reels: body.reels,
+            stories: body.stories,
+            id_instagram: body.id_instagram,
+        });
 
-        // Only update fields that are provided in the body
-        // We use !== undefined to allow explicit null values (to clear a field)
-        if (body.data_postagem !== undefined) updateData.data_postagem = body.data_postagem;
-        if (body.descricao !== undefined) updateData.descricao = body.descricao;
-        if (body.imagem_estatica !== undefined) updateData.imagem_estatica = body.imagem_estatica;
-        if (body.carrossel !== undefined) updateData.carrossel = body.carrossel;
-        if (body.reels !== undefined) updateData.reels = body.reels;
-        if (body.stories !== undefined) updateData.stories = body.stories;
-        if (body.id_instagram !== undefined) updateData.id_instagram = body.id_instagram;
-
-        const { data, error } = await supabase
-            .from('chiquinho_sorvetes_conteudos')
-            .update(updateData)
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Supabase error updating content:', error);
-            return NextResponse.json(
-                { 
-                    error: 'Erro ao atualizar conteúdo no banco de dados', 
-                    details: error.message,
-                    code: error.code
-                },
-                { status: 500 }
-            );
-        }
-
-        return NextResponse.json(data);
+        return NextResponse.json(updated);
     } catch (error: any) {
         console.error('Error updating content:', error);
         return NextResponse.json(
@@ -86,19 +65,12 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-
-        const { error } = await supabase
-            .from('chiquinho_sorvetes_conteudos')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-
+        await nocodb.conteudos.delete(id);
         return NextResponse.json({ message: 'Conteúdo excluído com sucesso' });
     } catch (error: any) {
         console.error('Error deleting content:', error);
         return NextResponse.json(
-            { error: 'Erro ao excluir conteúdo' },
+            { error: 'Erro ao excluir conteúdo', details: error.message },
             { status: 500 }
         );
     }

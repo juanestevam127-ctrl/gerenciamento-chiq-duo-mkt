@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { nocodb } from '@/lib/nocodb';
+
+export const dynamic = 'force-dynamic';
 
 // GET single client
 export async function GET(
@@ -8,19 +10,20 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
+        const cliente = await nocodb.clientes.getById(id);
 
-        const { data, error } = await supabase
-            .from('chiquinho_sorvetes_clientes')
-            .select('*')
-            .eq('id', id)
-            .single();
+        if (!cliente) {
+            return NextResponse.json(
+                { error: 'Cliente não encontrado' },
+                { status: 404 }
+            );
+        }
 
-        if (error) throw error;
-
-        return NextResponse.json(data);
+        return NextResponse.json(cliente);
     } catch (error: any) {
+        console.error('Error fetching client:', error);
         return NextResponse.json(
-            { error: 'Erro ao buscar cliente' },
+            { error: 'Erro ao buscar cliente', details: error.message },
             { status: 500 }
         );
     }
@@ -35,29 +38,22 @@ export async function PUT(
         const { id } = await params;
         const body = await request.json();
 
-        const { data, error } = await supabase
-            .from('chiquinho_sorvetes_clientes')
-            .update({
-                nome_cliente: body.nome_cliente,
-                username_instagram: body.username_instagram,
-                id_instagram: body.id_instagram,
-                horario_postagem: body.horario_postagem || null,
-                token: body.token || null,
-                webhook: body.webhook || null,
-                id_pagina_facebook: body.id_pagina_facebook || null,
-                token_facebook: body.token_facebook || null,
-            })
-            .eq('id', id)
-            .select()
-            .single();
+        const updated = await nocodb.clientes.update(id, {
+            nome_cliente: body.nome_cliente,
+            username_instagram: body.username_instagram,
+            id_instagram: body.id_instagram,
+            horario_postagem: body.horario_postagem || null,
+            token: body.token || null,
+            webhook: body.webhook || null,
+            id_pagina_facebook: body.id_pagina_facebook || null,
+            token_facebook: body.token_facebook || null,
+        });
 
-        if (error) throw error;
-
-        return NextResponse.json(data);
+        return NextResponse.json(updated);
     } catch (error: any) {
         console.error('Error updating client:', error);
         return NextResponse.json(
-            { error: 'Erro ao atualizar cliente' },
+            { error: 'Erro ao atualizar cliente', details: error.message },
             { status: 500 }
         );
     }
@@ -70,19 +66,12 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-
-        const { error } = await supabase
-            .from('chiquinho_sorvetes_clientes')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-
+        await nocodb.clientes.delete(id);
         return NextResponse.json({ message: 'Cliente excluído com sucesso' });
     } catch (error: any) {
         console.error('Error deleting client:', error);
         return NextResponse.json(
-            { error: 'Erro ao excluir cliente' },
+            { error: 'Erro ao excluir cliente', details: error.message },
             { status: 500 }
         );
     }

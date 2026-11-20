@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { nocodb } from '@/lib/nocodb';
 import { Cliente, ControlePostagem } from '@/types/database';
 
 type TipoPostagem = 'FEED' | 'STORIES' | 'FEED FACEBOOK' | 'STORIES FACEBOOK';
@@ -28,39 +28,20 @@ export async function GET(request: NextRequest) {
         }
 
         // Fetch client info
-        const { data: cliente, error: clienteError } = await supabase
-            .from('chiquinho_sorvetes_clientes')
-            .select('*')
-            .eq('id_instagram', id_instagram)
-            .single();
-
-        if (clienteError || !cliente) {
-            return NextResponse.json({ error: 'Cliente nao encontrado' }, { status: 404 });
+        const cliente = await nocodb.clientes.getByInstagramId(id_instagram);
+        if (!cliente) {
+            return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 });
         }
 
-        // Fetch postagens for this client/date
-        const { data: postagens, error: postagensError } = await supabase
-            .from('chiquinho_sorvetes_controle_postagens')
-            .select('*')
-            .eq('id_instagram', id_instagram)
-            .eq('data_postagem', date);
+        // Fetch postagens and retry logs in parallel
+        const [postagens, retryLogs] = await Promise.all([
+            nocodb.controlePostagens.list({ date, id_instagram }),
+            nocodb.webhookRetryLog.list({ date, id_instagram }),
+        ]);
 
-        if (postagensError) throw postagensError;
-
-        // Fetch retry logs for this client/date
-        const { data: retryLogs, error: retryError } = await supabase
-            .from('webhook_retry_log')
-            .select('*')
-            .eq('id_instagram', id_instagram)
-            .eq('data_postagem', date)
-            .order('disparado_em', { ascending: true });
-
-        if (retryError) throw retryError;
-
-        const required = getRequiredTypes(cliente as Cliente);
-        const clientePostagens: ControlePostagem[] = postagens || [];
-        const postedTypes = clientePostagens.map(p => p.tipo_postagem);
-        const missingTypes = required.filter(t => !postedTypes.includes(t));
+        const required = getRequiredTypes(cliente);
+        const postedTypes = postagens.map(p => p.tipo_postagem);
+        const missingTypes = required.filter(t => !postedTypes.includes(t as any));
         const isComplete = missingTypes.length === 0;
 
         const logs = retryLogs || [];

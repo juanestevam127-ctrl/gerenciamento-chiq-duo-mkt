@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { nocodb } from '@/lib/nocodb';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,61 +10,60 @@ export async function GET(request: NextRequest) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
 
-        console.log('API GET /api/postagens: Fetching...', { cliente_id, startDate, endDate });
+        console.log('API GET /api/postagens: Fetching from NocoDB...', { cliente_id, startDate, endDate });
 
-        let query = supabase
-            .from('chiquinho_sorvetes_controle_postagens')
-            .select(`
-                *,
-                cliente:id_instagram (
-                    username_instagram,
-                    nome_cliente
-                ),
-                conteudo:conteudo_id (
-                    descricao
-                )
-            `)
-            .order('data_postagem', { ascending: false });
+        // 1. Fetch posts and clients in parallel
+        const [posts, clients, contents] = await Promise.all([
+            nocodb.controlePostagens.list({
+                id_instagram: cliente_id || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                limit: 500,
+            }),
+            nocodb.clientes.list(),
+            nocodb.conteudos.list({
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                limit: 500,
+            }),
+        ]);
 
-        if (cliente_id) {
-            query = query.eq('id_instagram', cliente_id);
+        // 2. Build fast lookup maps
+        const clientMap = new Map<string, { username_instagram: string; nome_cliente: string }>();
+        for (const c of clients) {
+            clientMap.set(c.id_instagram, {
+                username_instagram: c.username_instagram,
+                nome_cliente: c.nome_cliente,
+            });
         }
 
-        if (startDate) {
-            query = query.gte('data_postagem', startDate);
+        const contentByIdMap = new Map<string, string>();
+        const contentByDateMap = new Map<string, string>();
+        for (const c of contents) {
+            if (c.id && c.descricao) contentByIdMap.set(String(c.id), c.descricao);
+            if (c.data_postagem && c.descricao) contentByDateMap.set(c.data_postagem, c.descricao);
         }
 
-        if (endDate) {
-            query = query.lte('data_postagem', endDate);
-        }
+        // 3. Assemble enriched posts
+        const enrichedPosts = posts.map(post => {
+            const clienteInfo = clientMap.get(post.id_instagram);
+            let descricao: string | undefined = undefined;
 
-        const { data: postagensData, error: postagensError } = await query;
-
-        if (postagensError) throw postagensError;
-
-        // Fallback for missing descriptions: match by date and id_instagram
-        const postsWithFallback = await Promise.all((postagensData || []).map(async (post) => {
-            if (post.conteudo?.descricao) return post;
-
-            // If no explicit conteudo_id or missing descricao, try to find by date and account
-            const { data: contentData } = await supabase
-                .from('chiquinho_sorvetes_conteudos')
-                .select('descricao')
-                .eq('data_postagem', post.data_postagem)
-                .or(`id_instagram.eq.${post.id_instagram},id_instagram.is.null`)
-                .maybeSingle();
-
-            if (contentData?.descricao) {
-                return {
-                    ...post,
-                    conteudo: { descricao: contentData.descricao }
-                };
+            if (post.conteudo_id && contentByIdMap.has(String(post.conteudo_id))) {
+                descricao = contentByIdMap.get(String(post.conteudo_id));
+            } else if (contentByDateMap.has(post.data_postagem)) {
+                descricao = contentByDateMap.get(post.data_postagem);
             }
-            return post;
-        }));
 
-        console.log('API GET /api/postagens: Success, found', postsWithFallback.length, 'items');
-        return NextResponse.json(postsWithFallback);
+            return {
+                ...post,
+                cliente: clienteInfo || undefined,
+                conteudo: descricao ? { descricao } : undefined,
+            };
+        });
+
+        console.log('API GET /api/postagens: Success, returned', enrichedPosts.length, 'posts');
+        return NextResponse.json(enrichedPosts);
     } catch (error: any) {
         console.error('Error fetching posts:', error);
         return NextResponse.json(
