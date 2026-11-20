@@ -39,11 +39,15 @@ export function DelayedWebhookTrigger({ clients }: { clients: DelayedClient[] })
         setError('');
 
         const targets = clients
-            .filter(c => selectedIds.has(c.cliente.id) && c.cliente.webhook)
-            .map(c => ({ clienteId: c.cliente.id, webhookUrl: c.cliente.webhook! }));
+            .filter(c => selectedIds.has(c.cliente.id))
+            .map(c => ({
+                clienteId: c.cliente.id,
+                id_instagram: c.cliente.id_instagram,
+                webhookUrl: c.cliente.webhook,
+            }));
 
         if (targets.length === 0) {
-            setError('Nenhum dos clientes selecionados possui webhook configurado.');
+            setError('Nenhum cliente selecionado.');
             setFiring(false);
             return;
         }
@@ -155,6 +159,8 @@ export function DelayedWebhookTrigger({ clients }: { clients: DelayedClient[] })
                                             <div className="text-[10px] text-slate-500 truncate max-w-[120px]" title={cliente.webhook}>
                                                 {cliente.webhook}
                                             </div>
+                                        ) : (!cliente.id_pagina_facebook || !cliente.token_facebook) ? (
+                                            <span className="text-[10px] text-purple-400 font-mono">envia-nao-postagens</span>
                                         ) : (
                                             <span className="text-[10px] text-red-500/60 italic">Não configurado</span>
                                         )}

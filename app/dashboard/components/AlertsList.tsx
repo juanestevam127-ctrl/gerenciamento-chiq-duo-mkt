@@ -22,8 +22,11 @@ function AlertItem({
     const [fired, setFired] = useState(false);
     const [error, setError] = useState('');
 
+    const isOnlyInstagram = !cliente.id_pagina_facebook || !cliente.token_facebook;
+    const canFire = isOnlyInstagram || !!cliente.webhook;
+
     const fireWebhook = async () => {
-        if (!cliente.webhook) return;
+        if (!canFire) return;
         setFiring(true);
         setError('');
         try {
@@ -32,6 +35,7 @@ function AlertItem({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     clienteId: cliente.id,
+                    id_instagram: cliente.id_instagram,
                     webhookUrl: cliente.webhook,
                     trigger: 'manual_start',
                     timestamp: new Date().toISOString()
@@ -82,7 +86,7 @@ function AlertItem({
                 </div>
             </div>
 
-            {status === 'late' && cliente.webhook && (
+            {status === 'late' && canFire && (
                 <button
                     onClick={fireWebhook}
                     disabled={firing || fired}
