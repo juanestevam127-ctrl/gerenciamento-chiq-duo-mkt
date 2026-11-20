@@ -3,11 +3,19 @@ import { nocodb } from '@/lib/nocodb';
 
 export const dynamic = 'force-dynamic';
 
-const WEBHOOK_ENVIA_NAO_POSTAGENS = 'https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens';
+const WEBHOOK_ENVIA_NAO_POSTAGENS_INSTAGRAM = 'https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens';
+const WEBHOOK_ENVIA_NAO_POSTAGENS_FACEBOOK = 'https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens-facebook';
 
-function isClientOnlyInstagram(cliente: any): boolean {
-    if (!cliente) return true;
-    return !(cliente.id_pagina_facebook && cliente.token_facebook);
+function clientHasFacebook(cliente: any): boolean {
+    if (!cliente) return false;
+    return !!(cliente.token_facebook || (cliente.id_pagina_facebook && cliente.token_facebook));
+}
+
+function resolveWebhookUrl(cliente: any, fallbackUrl?: string): string {
+    if (clientHasFacebook(cliente)) {
+        return WEBHOOK_ENVIA_NAO_POSTAGENS_FACEBOOK;
+    }
+    return WEBHOOK_ENVIA_NAO_POSTAGENS_INSTAGRAM;
 }
 
 // Disparo individual
@@ -23,27 +31,18 @@ export async function POST(request: NextRequest) {
             cliente = await nocodb.clientes.getByInstagramId(id_instagram);
         }
 
-        const onlyInstagram = isClientOnlyInstagram(cliente);
-        const targetUrl = onlyInstagram ? WEBHOOK_ENVIA_NAO_POSTAGENS : (webhookUrl || cliente?.webhook);
+        const hasFb = clientHasFacebook(cliente);
+        const targetUrl = resolveWebhookUrl(cliente, webhookUrl);
 
-        if (!targetUrl) {
-            return NextResponse.json(
-                { error: 'Nenhum webhook configurado para este cliente' },
-                { status: 400 }
-            );
-        }
-
-        const payload = onlyInstagram ? {
+        const payload = {
             id_instagram: cliente?.id_instagram || id_instagram,
             clienteId: cliente?.id || clienteId,
             nome_cliente: cliente?.nome_cliente,
             username_instagram: cliente?.username_instagram,
+            id_pagina_facebook: cliente?.id_pagina_facebook || null,
+            token_facebook: cliente?.token_facebook || null,
+            tem_facebook: hasFb,
             trigger: 'nao_postado',
-            timestamp: new Date().toISOString()
-        } : {
-            trigger: 'manual_start',
-            clienteId: cliente?.id || clienteId,
-            id_instagram: cliente?.id_instagram || id_instagram,
             timestamp: new Date().toISOString()
         };
 
@@ -61,7 +60,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        return NextResponse.json({ success: true, clienteId, targetUrl });
+        return NextResponse.json({ success: true, clienteId, targetUrl, tem_facebook: hasFb });
     } catch (error: any) {
         console.error('Error triggering webhook:', error);
         return NextResponse.json(
@@ -81,7 +80,7 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: 'Nenhum cliente para disparar' }, { status: 400 });
         }
 
-        // Buscar lista de clientes para checar quem tem apenas Instagram
+        // Buscar lista de clientes para checar quem tem Facebook
         const allClients = await nocodb.clientes.list();
         const clientMap = new Map<string, any>();
         for (const c of allClients) {
@@ -93,24 +92,18 @@ export async function PUT(request: NextRequest) {
         const results = await Promise.allSettled(
             targets.map(async (target) => {
                 const cliente = clientMap.get(String(target.clienteId)) || (target.id_instagram ? clientMap.get(String(target.id_instagram)) : null);
-                const onlyInstagram = isClientOnlyInstagram(cliente);
-                const targetUrl = onlyInstagram ? WEBHOOK_ENVIA_NAO_POSTAGENS : (target.webhookUrl || cliente?.webhook);
+                const hasFb = clientHasFacebook(cliente);
+                const targetUrl = resolveWebhookUrl(cliente, target.webhookUrl);
 
-                if (!targetUrl) {
-                    throw new Error('Sem webhook configurado');
-                }
-
-                const payload = onlyInstagram ? {
+                const payload = {
                     id_instagram: cliente?.id_instagram || target.id_instagram,
                     clienteId: cliente?.id || target.clienteId,
                     nome_cliente: cliente?.nome_cliente,
                     username_instagram: cliente?.username_instagram,
+                    id_pagina_facebook: cliente?.id_pagina_facebook || null,
+                    token_facebook: cliente?.token_facebook || null,
+                    tem_facebook: hasFb,
                     trigger: 'nao_postado',
-                    timestamp: new Date().toISOString()
-                } : {
-                    trigger: 'bulk_start',
-                    clienteId: cliente?.id || target.clienteId,
-                    id_instagram: cliente?.id_instagram || target.id_instagram,
                     timestamp: new Date().toISOString()
                 };
 
@@ -120,7 +113,7 @@ export async function PUT(request: NextRequest) {
                     body: JSON.stringify(payload),
                 });
 
-                return { clienteId: target.clienteId, targetUrl, status: res.status, ok: res.ok };
+                return { clienteId: target.clienteId, targetUrl, status: res.status, ok: res.ok, tem_facebook: hasFb };
             })
         );
 

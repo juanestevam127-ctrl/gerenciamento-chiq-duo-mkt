@@ -155,14 +155,14 @@ export function DelayedWebhookTrigger({ clients }: { clients: DelayedClient[] })
                                         {horaProgramada}
                                     </td>
                                     <td className="px-4 py-3">
-                                        {cliente.webhook ? (
-                                            <div className="text-[10px] text-slate-500 truncate max-w-[120px]" title={cliente.webhook}>
-                                                {cliente.webhook}
-                                            </div>
-                                        ) : (!cliente.id_pagina_facebook || !cliente.token_facebook) ? (
-                                            <span className="text-[10px] text-purple-400 font-mono">envia-nao-postagens</span>
+                                        {(cliente.token_facebook || (cliente.id_pagina_facebook && cliente.token_facebook)) ? (
+                                            <span className="text-[10px] text-blue-400 font-mono bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20" title="Disparo via Facebook + Instagram">
+                                                envia-nao-postagens-facebook
+                                            </span>
                                         ) : (
-                                            <span className="text-[10px] text-red-500/60 italic">Não configurado</span>
+                                            <span className="text-[10px] text-purple-400 font-mono bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20" title="Disparo apenas Instagram">
+                                                envia-nao-postagens
+                                            </span>
                                         )}
                                     </td>
                                     <td className="px-4 py-3">

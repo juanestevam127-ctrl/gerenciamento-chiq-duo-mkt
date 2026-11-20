@@ -22,8 +22,8 @@ function AlertItem({
     const [fired, setFired] = useState(false);
     const [error, setError] = useState('');
 
-    const isOnlyInstagram = !cliente.id_pagina_facebook || !cliente.token_facebook;
-    const canFire = isOnlyInstagram || !!cliente.webhook;
+    const hasFb = !!(cliente.token_facebook || (cliente.id_pagina_facebook && cliente.token_facebook));
+    const canFire = true;
 
     const fireWebhook = async () => {
         if (!canFire) return;

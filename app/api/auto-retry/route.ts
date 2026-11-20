@@ -4,13 +4,14 @@ import { Cliente, ControlePostagem, WebhookRetryLog } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 
-const WEBHOOK_ENVIA_NAO_POSTAGENS = 'https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens';
+const WEBHOOK_ENVIA_NAO_POSTAGENS_INSTAGRAM = 'https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens';
+const WEBHOOK_ENVIA_NAO_POSTAGENS_FACEBOOK = 'https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens-facebook';
 
 /**
- * Returns true if client has Facebook page and token configured.
+ * Returns true if client has Facebook token configured.
  */
 function hasFacebook(cliente: Cliente): boolean {
-    return !!(cliente.id_pagina_facebook && cliente.token_facebook);
+    return !!(cliente.token_facebook || (cliente.id_pagina_facebook && cliente.token_facebook));
 }
 
 /**
@@ -34,9 +35,13 @@ function isPostingComplete(postagens: ControlePostagem[], required: TipoPostagem
  * Checks all clients scheduled for today, finds incomplete postings,
  * and triggers webhooks up to 3 times (every 30 minutes).
  * 
- * Regra: Para clientes com apenas Instagram, o webhook sempre é enviado para:
- * https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens
- * contendo o id_instagram do cliente. Se houver múltiplos clientes, envia 1 webhook por cliente.
+ * Regras de Webhook para envio de tentativas:
+ * - Clientes com apenas Instagram:
+ *   https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens
+ * - Clientes que têm token do Facebook:
+ *   https://criadordigital-n8n-webhook.5rqumh.easypanel.host/webhook/envia-nao-postagens-facebook
+ * 
+ * Sempre envia 1 webhook individual para cada cliente contendo o id_instagram.
  */
 export async function POST(request: NextRequest) {
     try {
@@ -45,8 +50,8 @@ export async function POST(request: NextRequest) {
 
         // 1. Fetch all clients from NocoDB
         const allClients = await nocodb.clientes.list();
-        // Clientes que possuem horário programado e (webhook próprio OU são apenas Instagram)
-        const clientes = allClients.filter(c => c.horario_postagem && (c.webhook || !hasFacebook(c)));
+        // Todos os clientes que possuem horário programado
+        const clientes = allClients.filter(c => c.horario_postagem);
 
         if (!clientes || clientes.length === 0) {
             return NextResponse.json({ message: 'Nenhum cliente configurado', results: [] });
@@ -144,39 +149,28 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // 4. Determina qual webhook e payload disparar (Regra de Apenas Instagram)
-            const isOnlyInstagram = !hasFacebook(cliente);
-            const targetWebhookUrl = isOnlyInstagram ? WEBHOOK_ENVIA_NAO_POSTAGENS : cliente.webhook!;
-
-            if (!targetWebhookUrl) {
-                results.push({
-                    cliente: cliente.nome_cliente,
-                    username_instagram: cliente.username_instagram,
-                    action: 'erro',
-                    reason: 'Cliente sem webhook configurado'
-                });
-                continue;
-            }
+            // 4. Determina qual webhook disparar de acordo com Facebook vs apenas Instagram
+            const clientHasFb = hasFacebook(cliente);
+            const targetWebhookUrl = clientHasFb 
+                ? WEBHOOK_ENVIA_NAO_POSTAGENS_FACEBOOK 
+                : WEBHOOK_ENVIA_NAO_POSTAGENS_INSTAGRAM;
 
             const nextTentativa = tentativasCount + 1;
             let webhookStatus: 'success' | 'failed' = 'failed';
 
-            const payload = isOnlyInstagram ? {
+            const payload = {
                 id_instagram: cliente.id_instagram,
                 clienteId: cliente.id,
                 nome_cliente: cliente.nome_cliente,
                 username_instagram: cliente.username_instagram,
+                id_pagina_facebook: cliente.id_pagina_facebook || null,
+                token_facebook: cliente.token_facebook || null,
+                tem_facebook: clientHasFb,
                 trigger: 'nao_postado',
                 tentativa: nextTentativa,
                 data_postagem: today,
                 timestamp: nowUtc.toISOString(),
                 faltam: required.filter(t => !clientePostagens.some(p => p.tipo_postagem === t)),
-            } : {
-                trigger: 'auto_retry',
-                clienteId: cliente.id,
-                id_instagram: cliente.id_instagram,
-                tentativa: nextTentativa,
-                timestamp: nowUtc.toISOString(),
             };
 
             try {
@@ -205,6 +199,7 @@ export async function POST(request: NextRequest) {
                 username_instagram: cliente.username_instagram,
                 id_instagram: cliente.id_instagram,
                 webhook_url: targetWebhookUrl,
+                canal: clientHasFb ? 'Facebook + Instagram' : 'Apenas Instagram',
                 action: 'webhook_disparado',
                 tentativa: nextTentativa,
                 status: webhookStatus,
