@@ -37,7 +37,24 @@ export interface ControlePostagem {
     id_instagram: string;
     tipo_postagem: 'FEED' | 'STORIES' | 'FEED FACEBOOK' | 'STORIES FACEBOOK';
     conteudo_id?: string;
+    conteudo_postado?: string;
     created_at: string;
+}
+
+export interface StoryProgressItem {
+    index: number;
+    url: string;
+    postedIg: boolean;
+    postedFb: boolean;
+    postRecordIdIg?: string;
+    postRecordIdFb?: string;
+}
+
+export interface DuplicidadeInfo {
+    tipo: 'FEED' | 'STORIES' | 'FEED FACEBOOK' | 'STORIES FACEBOOK';
+    descricao: string;
+    ids: string[];
+    conteudo_postado?: string;
 }
 
 export interface WebhookRetryLog {

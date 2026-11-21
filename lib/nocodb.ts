@@ -97,6 +97,7 @@ function mapControle(row: any): ControlePostagem {
         id_instagram: String(row['ID Instagram'] || row.id_instagram || ''),
         tipo_postagem: row['Tipo Postagem'] || row.tipo_postagem || 'FEED',
         conteudo_id: row['Conteudo ID'] || row.conteudo_id || undefined,
+        conteudo_postado: row['Conteúdo Postado'] || row.conteudo_postado || row['conteudo_postado'] || undefined,
         created_at: row.CreatedAt || row.created_at || '',
     };
 }
@@ -362,6 +363,7 @@ export const nocodb = {
                 'ID Instagram': data.id_instagram,
                 'Tipo Postagem': data.tipo_postagem,
                 'Conteudo ID': data.conteudo_id || null,
+                'Conteúdo Postado': data.conteudo_postado || null,
             };
 
             const res = await nocoFetch<any>(
@@ -378,6 +380,7 @@ export const nocodb = {
                 id_instagram: String(data.id_instagram || ''),
                 tipo_postagem: data.tipo_postagem || 'FEED',
                 conteudo_id: data.conteudo_id,
+                conteudo_postado: data.conteudo_postado,
                 created_at: new Date().toISOString(),
             };
         },

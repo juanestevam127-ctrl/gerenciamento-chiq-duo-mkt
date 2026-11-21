@@ -1,6 +1,6 @@
 'use client';
 
-import { Users, CheckCircle, Clock, AlertTriangle, XCircle, PieChart } from 'lucide-react';
+import { Users, CheckCircle, Clock, AlertTriangle, XCircle, PieChart, Copy } from 'lucide-react';
 
 interface Stats {
     totalClientes: number;
@@ -10,11 +10,15 @@ interface Stats {
     semConteudo: number;
     taxaPostagem: number;
     isHoje: boolean;
+    duplicados?: number;
+    storiesIncompletos?: number;
 }
 
 export function KPICards({ stats }: { stats: Stats }) {
+    const hasDuplicates = (stats.duplicados ?? 0) > 0;
+
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <div className={`grid grid-cols-2 md:grid-cols-3 ${hasDuplicates ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} gap-4 mb-6`}>
             <div className="glass-card p-4 rounded-xl flex flex-col justify-between h-28">
                 <div className="flex justify-between items-start">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Clientes</p>
@@ -69,6 +73,19 @@ export function KPICards({ stats }: { stats: Stats }) {
                 </div>
                 <p className="text-3xl font-bold text-slate-200">{stats.semConteudo}</p>
             </div>
+
+            {hasDuplicates && (
+                <div className="glass-card p-4 rounded-xl border-t-2 border-t-amber-500 bg-amber-500/5 flex flex-col justify-between h-28 animate-pulse">
+                    <div className="flex justify-between items-start">
+                        <p className="text-xs font-medium text-amber-400 uppercase tracking-wider">Duplicados</p>
+                        <Copy className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <p className="text-3xl font-bold text-amber-300">{stats.duplicados}</p>
+                        <span className="text-[10px] text-amber-400 font-medium">loja(s)</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

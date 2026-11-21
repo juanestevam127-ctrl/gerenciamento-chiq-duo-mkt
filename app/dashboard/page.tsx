@@ -11,7 +11,7 @@ import { HistoryChart } from './components/HistoryChart';
 import { AlertsList } from './components/AlertsList';
 import { AutoRetryMonitor } from './components/AutoRetryMonitor';
 import { DetailedTable } from './components/DetailedTable';
-import { Cliente, Conteudo, ControlePostagem } from '@/types/database';
+import { Cliente, Conteudo, ControlePostagem, StoryProgressItem, DuplicidadeInfo } from '@/types/database';
 import { parseLocalDate } from '@/lib/utils';
 
 interface DashboardData {
@@ -89,7 +89,9 @@ export default function DashboardPage() {
             pendentes: 0,
             semConteudo: 0,
             taxaPostagem: 0,
-            isHoje: dateRange.label === 'Hoje'
+            isHoje: dateRange.label === 'Hoje',
+            duplicados: 0,
+            storiesIncompletos: 0,
         };
 
         const history: any[] = [];
@@ -107,7 +109,6 @@ export default function DashboardPage() {
 
             data.clientes.forEach(cliente => {
                 // 1. Find Content for this Client on this Day
-                // Logic: Matches date AND (id_instagram is linked OR id_instagram is null/generic).
                 const clientContents = data.conteudos.filter(c =>
                     c.data_postagem === dateStr && (c.id_instagram === cliente.id_instagram || !c.id_instagram)
                 );
@@ -124,24 +125,171 @@ export default function DashboardPage() {
                     if (c.stories && !contentTypes.includes('STORIES')) contentTypes.push('STORIES');
                 });
 
-                // 2. Find Posts (Multiple possible: Feed and Stories)
+                // Extract all scheduled story URLs
+                const scheduledStories: string[] = [];
+                clientContents.forEach(c => {
+                    if (c.stories) {
+                        let parsed: any = null;
+                        try {
+                            parsed = typeof c.stories === 'string' ? JSON.parse(c.stories) : c.stories;
+                        } catch {
+                            parsed = c.stories;
+                        }
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(url => {
+                                if (typeof url === 'string' && url.trim() && !scheduledStories.includes(url.trim())) {
+                                    scheduledStories.push(url.trim());
+                                }
+                            });
+                        } else if (typeof parsed === 'string' && parsed.trim() && !scheduledStories.includes(parsed.trim())) {
+                            scheduledStories.push(parsed.trim());
+                        }
+                    }
+                });
+                const storiesTotal = scheduledStories.length;
+
+                // 2. Find Posts
                 const clientPosts = data.postagens.filter(p =>
                     p.data_postagem === dateStr && p.id_instagram === cliente.id_instagram
                 );
 
-                const hasFeedPost = clientPosts.some(p => p.tipo_postagem === 'FEED');
-                const hasStoriesPost = clientPosts.some(p => p.tipo_postagem === 'STORIES');
-                const hasFeedFbPost = clientPosts.some(p => p.tipo_postagem === 'FEED FACEBOOK');
-                const hasStoriesFbPost = clientPosts.some(p => p.tipo_postagem === 'STORIES FACEBOOK');
+                const igFeedPosts = clientPosts.filter(p => p.tipo_postagem === 'FEED');
+                const fbFeedPosts = clientPosts.filter(p => p.tipo_postagem === 'FEED FACEBOOK');
+                const igStoryPosts = clientPosts.filter(p => p.tipo_postagem === 'STORIES');
+                const fbStoryPosts = clientPosts.filter(p => p.tipo_postagem === 'STORIES FACEBOOK');
+
+                const hasFeedPost = igFeedPosts.length > 0;
+                const hasStoriesPost = igStoryPosts.length > 0;
+                const hasFeedFbPost = fbFeedPosts.length > 0;
+                const hasStoriesFbPost = fbStoryPosts.length > 0;
 
                 const hasFacebook = !!(cliente.id_pagina_facebook && cliente.token_facebook);
 
-                // Determine if everything required is done
-                const isAllDone = hasFacebook
-                    ? (hasFeedPost && hasStoriesPost && hasFeedFbPost && hasStoriesFbPost)
-                    : ((!needsFeed || hasFeedPost) && (!needsStories || hasStoriesPost));
+                // 3. Match Stories item-by-item
+                const storiesItems: StoryProgressItem[] = scheduledStories.map((url, idx) => {
+                    const matchIg = igStoryPosts.find(p => p.conteudo_postado && p.conteudo_postado.trim() === url.trim())
+                        || (!igStoryPosts.some(p => p.conteudo_postado) && igStoryPosts.length > idx ? igStoryPosts[idx] : undefined);
 
-                // 3. Determine Status
+                    const matchFb = fbStoryPosts.find(p => p.conteudo_postado && p.conteudo_postado.trim() === url.trim())
+                        || (!fbStoryPosts.some(p => p.conteudo_postado) && fbStoryPosts.length > idx ? fbStoryPosts[idx] : undefined);
+
+                    return {
+                        index: idx + 1,
+                        url,
+                        postedIg: !!matchIg,
+                        postedFb: !!matchFb,
+                        postRecordIdIg: matchIg?.id,
+                        postRecordIdFb: matchFb?.id,
+                    };
+                });
+
+                const storiesPostedIgCount = storiesTotal > 0
+                    ? storiesItems.filter(i => i.postedIg).length
+                    : igStoryPosts.length;
+
+                const storiesPostedFbCount = storiesTotal > 0
+                    ? storiesItems.filter(i => i.postedFb).length
+                    : fbStoryPosts.length;
+
+                // 4. Duplicate Detection
+                const duplicidades: DuplicidadeInfo[] = [];
+
+                if (igFeedPosts.length > 1) {
+                    duplicidades.push({
+                        tipo: 'FEED',
+                        descricao: `${igFeedPosts.length}x posts de FEED no Instagram`,
+                        ids: igFeedPosts.map(p => p.id),
+                    });
+                }
+
+                if (fbFeedPosts.length > 1) {
+                    duplicidades.push({
+                        tipo: 'FEED FACEBOOK',
+                        descricao: `${fbFeedPosts.length}x posts de FEED no Facebook`,
+                        ids: fbFeedPosts.map(p => p.id),
+                    });
+                }
+
+                // Check duplicate Stories URLs in IG
+                const igStoriesByUrl = new Map<string, ControlePostagem[]>();
+                igStoryPosts.forEach(p => {
+                    const key = (p.conteudo_postado || '').trim();
+                    if (key) {
+                        if (!igStoriesByUrl.has(key)) igStoriesByUrl.set(key, []);
+                        igStoriesByUrl.get(key)!.push(p);
+                    }
+                });
+                igStoriesByUrl.forEach((plist, url) => {
+                    if (plist.length > 1) {
+                        duplicidades.push({
+                            tipo: 'STORIES',
+                            descricao: `${plist.length}x o mesmo Story no Instagram`,
+                            ids: plist.map(p => p.id),
+                            conteudo_postado: url,
+                        });
+                    }
+                });
+
+                if (storiesTotal > 0 && igStoryPosts.length > storiesTotal && !duplicidades.some(d => d.tipo === 'STORIES')) {
+                    duplicidades.push({
+                        tipo: 'STORIES',
+                        descricao: `${igStoryPosts.length} stories postados para ${storiesTotal} agendados (${igStoryPosts.length - storiesTotal} a mais no IG)`,
+                        ids: igStoryPosts.map(p => p.id),
+                    });
+                }
+
+                // Check duplicate Stories URLs in FB
+                const fbStoriesByUrl = new Map<string, ControlePostagem[]>();
+                fbStoryPosts.forEach(p => {
+                    const key = (p.conteudo_postado || '').trim();
+                    if (key) {
+                        if (!fbStoriesByUrl.has(key)) fbStoriesByUrl.set(key, []);
+                        fbStoriesByUrl.get(key)!.push(p);
+                    }
+                });
+                fbStoriesByUrl.forEach((plist, url) => {
+                    if (plist.length > 1) {
+                        duplicidades.push({
+                            tipo: 'STORIES FACEBOOK',
+                            descricao: `${plist.length}x o mesmo Story no Facebook`,
+                            ids: plist.map(p => p.id),
+                            conteudo_postado: url,
+                        });
+                    }
+                });
+
+                if (hasFacebook && storiesTotal > 0 && fbStoryPosts.length > storiesTotal && !duplicidades.some(d => d.tipo === 'STORIES FACEBOOK')) {
+                    duplicidades.push({
+                        tipo: 'STORIES FACEBOOK',
+                        descricao: `${fbStoryPosts.length} stories postados para ${storiesTotal} agendados (${fbStoryPosts.length - storiesTotal} a mais no FB)`,
+                        ids: fbStoryPosts.map(p => p.id),
+                    });
+                }
+
+                const hasDuplicates = duplicidades.length > 0;
+                if (hasDuplicates) {
+                    stats.duplicados = (stats.duplicados || 0) + 1;
+                }
+
+                // Partial stories check
+                const isPartialStories = needsStories && storiesTotal > 0 && (
+                    (storiesPostedIgCount > 0 && storiesPostedIgCount < storiesTotal) ||
+                    (hasFacebook && storiesPostedFbCount > 0 && storiesPostedFbCount < storiesTotal)
+                );
+                if (isPartialStories) {
+                    stats.storiesIncompletos = (stats.storiesIncompletos || 0) + 1;
+                }
+
+                // Determine if all required content is posted
+                const isFeedDone = !needsFeed || (hasFeedPost && (!hasFacebook || hasFeedFbPost));
+                const isStoriesDone = !needsStories || (
+                    storiesTotal > 0
+                        ? (storiesPostedIgCount >= storiesTotal && (!hasFacebook || storiesPostedFbCount >= storiesTotal))
+                        : (hasStoriesPost && (!hasFacebook || hasStoriesFbPost))
+                );
+                const isAllDone = isFeedDone && isStoriesDone;
+
+                // 5. Determine Status
                 let status = 'no_content';
                 const now = new Date();
                 const isToday = isSameDay(day, now);
@@ -159,28 +307,27 @@ export default function DashboardPage() {
                 } else {
                     // Has Content, but NOT all done
                     if (isPast) {
-                        status = 'missed'; // Considered "Atrasado" for history, effectively missed
+                        status = 'missed';
                         stats.atrasados++;
                         dayAtrasados++;
                         statusDistribution[1].value++;
                     } else if (isToday) {
-                        // Check time
                         if (cliente.horario_postagem) {
                             const [hours, minutes] = cliente.horario_postagem.split(':').map(Number);
                             const postTime = new Date(day);
                             postTime.setHours(hours, minutes, 0, 0);
 
                             if (isAfter(now, postTime)) {
-                                status = 'late';
+                                status = isPartialStories ? 'partial' : 'late';
                                 stats.atrasados++;
                                 statusDistribution[1].value++;
                             } else {
-                                status = 'pending';
+                                status = isPartialStories ? 'partial' : 'pending';
                                 stats.pendentes++;
                                 statusDistribution[2].value++;
                             }
                         } else {
-                            status = 'pending';
+                            status = isPartialStories ? 'partial' : 'pending';
                             stats.pendentes++;
                             statusDistribution[2].value++;
                         }
@@ -204,7 +351,21 @@ export default function DashboardPage() {
                     horaPostagem: latestPost?.created_at,
                     tipoPostado: latestPost?.tipo_postagem,
                     date: dateStr,
-                    horaProgramada: cliente.horario_postagem
+                    horaProgramada: cliente.horario_postagem,
+                    hasFacebook,
+                    needsFeed,
+                    needsStories,
+                    feedIgCount: igFeedPosts.length,
+                    feedFbCount: fbFeedPosts.length,
+                    hasFeedPost,
+                    hasFeedFbPost,
+                    storiesTotal,
+                    storiesPostedIgCount,
+                    storiesPostedFbCount,
+                    storiesItems,
+                    duplicidades,
+                    hasDuplicates,
+                    isPartialStories,
                 });
             });
 
