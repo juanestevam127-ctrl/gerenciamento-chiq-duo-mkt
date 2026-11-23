@@ -7,10 +7,12 @@ import { Cliente } from '@/types/database';
 interface RetryResult {
     cliente: string;
     username_instagram?: string;
-    action: 'completo' | 'webhook_disparado' | 'aguardando' | 'aguardando_retry' | 'max_tentativas';
+    action: 'completo' | 'webhook_disparado' | 'aguardando' | 'aguardando_retry' | 'aguardando_intervalo' | 'max_tentativas';
     tentativa?: number;
+    tentativa_atual?: number;
     status?: 'success' | 'failed';
     faltam?: string[];
+    proximo_disparo?: string;
     proximo_retry?: string;
     tentativas?: number;
 }
@@ -24,15 +26,9 @@ interface AutoRetryMonitorProps {
 
 function RetryBadge({ tentativa, status }: { tentativa?: number; status?: string }) {
     if (!tentativa) return null;
-    const configs: Record<number, { label: string; cls: string }> = {
-        1: { label: '1ª tentativa', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-        2: { label: '2ª tentativa', cls: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-        3: { label: '3ª tentativa', cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
-    };
-    const cfg = configs[tentativa] || { label: `Tentativa ${tentativa}`, cls: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
     return (
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.cls}`}>
-            {cfg.label}
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-purple-500/20 text-purple-300 border-purple-500/30">
+            {tentativa}ª tentativa
             {status === 'success' && ' ✓'}
             {status === 'failed' && ' ✗'}
         </span>
@@ -45,6 +41,7 @@ function ActionIcon({ action }: { action: RetryResult['action'] }) {
         case 'webhook_disparado': return <Send className="w-4 h-4 text-purple-400 shrink-0" />;
         case 'aguardando': return <Clock className="w-4 h-4 text-blue-400 shrink-0" />;
         case 'aguardando_retry': return <RefreshCw className="w-4 h-4 text-orange-400 shrink-0" />;
+        case 'aguardando_intervalo': return <Clock className="w-4 h-4 text-orange-400 shrink-0" />;
         case 'max_tentativas': return <XCircle className="w-4 h-4 text-red-400 shrink-0" />;
         default: return <AlertCircle className="w-4 h-4 text-slate-400 shrink-0" />;
     }
@@ -63,14 +60,15 @@ function ActionLabel({ result }: { result: RetryResult }) {
                 </span>
             );
         case 'aguardando': return <span className="text-blue-400">Aguardando horário</span>;
+        case 'aguardando_intervalo':
         case 'aguardando_retry':
             return (
                 <span className="text-orange-400">
-                    Aguardando próxima tentativa ({result.tentativa}/3)
+                    Aguardando intervalo de 5 min ({result.tentativa_atual || result.tentativas || 0} já disparada{Number(result.tentativa_atual || result.tentativas) > 1 ? 's' : ''})
                 </span>
             );
         case 'max_tentativas':
-            return <span className="text-red-400">Máx. tentativas atingido (3/3)</span>;
+            return <span className="text-red-400">Tentativas pausadas</span>;
         default: return <span className="text-slate-400">{result.action}</span>;
     }
 }
@@ -126,7 +124,7 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
     }, []);
 
     const dispatched = results.filter(r => r.action === 'webhook_disparado');
-    const maxed = results.filter(r => r.action === 'max_tentativas');
+    const waitingInterval = results.filter(r => r.action === 'aguardando_intervalo');
     const complete = results.filter(r => r.action === 'completo');
 
     return (
@@ -182,9 +180,9 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
                                 ↑ {dispatched.length} webhook(s) disparado(s)
                             </span>
                         )}
-                        {maxed.length > 0 && (
-                            <span className="text-[10px] bg-red-500/15 border border-red-500/25 text-red-300 px-2 py-0.5 rounded-full">
-                                ✗ {maxed.length} esgotado(s)
+                        {waitingInterval.length > 0 && (
+                            <span className="text-[10px] bg-orange-500/15 border border-orange-500/25 text-orange-300 px-2 py-0.5 rounded-full">
+                                ⏳ {waitingInterval.length} aguardando 5 min
                             </span>
                         )}
                     </div>

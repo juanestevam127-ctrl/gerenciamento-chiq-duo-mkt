@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Filter, ChevronDown } from 'lucide-react';
+import { getTodayBrazil, parseLocalDate } from '@/lib/utils';
 
 interface FilterBarProps {
     onFilterChange: (startDate: string, endDate: string, label: string) => void;
@@ -16,7 +17,7 @@ export function FilterBar({ onFilterChange, isLoading }: FilterBarProps) {
     const [customStart, setCustomStart] = useState('');
     const [customEnd, setCustomEnd] = useState('');
 
-    const today = new Date();
+    const today = parseLocalDate(getTodayBrazil()) || new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
 
     const handlePreset = (label: string, start: Date, end: Date) => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nocodb } from '@/lib/nocodb';
+import { getTodayBrazil } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +11,9 @@ export async function GET(request: NextRequest) {
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
 
-        const targetStartDate = startDate || date || new Date().toISOString().split('T')[0];
-        const targetEndDate = endDate || date || new Date().toISOString().split('T')[0];
+        const todayBrazil = getTodayBrazil();
+        const targetStartDate = startDate || date || todayBrazil;
+        const targetEndDate = endDate || date || todayBrazil;
 
         console.log(`API GET /api/dashboard/data: Fetching for ${targetStartDate} to ${targetEndDate} from NocoDB...`);
 

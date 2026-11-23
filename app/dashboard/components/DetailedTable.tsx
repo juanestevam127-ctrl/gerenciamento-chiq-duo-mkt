@@ -276,11 +276,19 @@ export function DetailedTable({ data }: { data: RowData[] }) {
                                                     </div>
                                                 </div>
 
-                                                {/* Alerta de Duplicidade na primeira coluna */}
+                                                {/* Alertas de Duplicidade específicos (Feed IG/FB, Story #) */}
                                                 {row.hasDuplicates && (
-                                                    <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-400 font-semibold bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded w-fit">
-                                                        <AlertOctagon className="w-3 h-3 text-amber-400 shrink-0" />
-                                                        {row.duplicidades.length} alerta(s) de duplicado
+                                                    <div className="mt-1.5 flex flex-wrap gap-1 max-w-[280px]">
+                                                        {row.duplicidades.map((dup, dIdx) => (
+                                                            <span
+                                                                key={dIdx}
+                                                                className="inline-flex items-center gap-1 text-[10px] font-semibold bg-red-500/15 text-red-300 border border-red-500/30 px-1.5 py-0.5 rounded shadow-sm"
+                                                                title={`IDs no NocoDB: ${dup.ids.join(', ')}`}
+                                                            >
+                                                                <AlertOctagon className="w-2.5 h-2.5 text-red-400 shrink-0" />
+                                                                {dup.descricao}
+                                                            </span>
+                                                        ))}
                                                     </div>
                                                 )}
                                             </td>
@@ -506,12 +514,15 @@ export function DetailedTable({ data }: { data: RowData[] }) {
                                                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                                                                     {row.storiesItems.map((story) => {
                                                                         const isVideo = story.url.endsWith('.mp4') || story.url.endsWith('.mov') || story.url.includes('video');
+                                                                        const isStoryDuplicated = row.duplicidades.some(d => d.conteudo_postado && d.conteudo_postado.trim() === story.url.trim());
 
                                                                         return (
                                                                             <div 
                                                                                 key={story.index}
                                                                                 className={`p-2.5 rounded-xl border flex flex-col justify-between gap-2 transition-all ${
-                                                                                    story.postedIg && (!row.hasFacebook || story.postedFb)
+                                                                                    isStoryDuplicated
+                                                                                        ? 'bg-red-500/10 border-red-500/40 ring-1 ring-red-500/30'
+                                                                                        : story.postedIg && (!row.hasFacebook || story.postedFb)
                                                                                         ? 'bg-green-500/5 border-green-500/25'
                                                                                         : story.postedIg || story.postedFb
                                                                                         ? 'bg-amber-500/5 border-amber-500/25'
@@ -583,6 +594,14 @@ export function DetailedTable({ data }: { data: RowData[] }) {
                                                                                         </div>
                                                                                     )}
                                                                                 </div>
+
+                                                                                {/* Alerta de duplicidade no card do story */}
+                                                                                {isStoryDuplicated && (
+                                                                                    <div className="bg-red-500/20 border border-red-500/40 text-red-300 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center justify-center gap-1 mt-1">
+                                                                                        <AlertOctagon className="w-2.5 h-2.5 text-red-400 shrink-0" />
+                                                                                        Duplicado
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                         );
                                                                     })}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nocodb } from '@/lib/nocodb';
+import { getTodayBrazil } from '@/lib/utils';
 import { Cliente, ControlePostagem } from '@/types/database';
 
 type TipoPostagem = 'FEED' | 'STORIES' | 'FEED FACEBOOK' | 'STORIES FACEBOOK';
@@ -21,7 +22,7 @@ function getRequiredTypes(cliente: Cliente): TipoPostagem[] {
 export async function GET(request: NextRequest) {
     try {
         const id_instagram = request.nextUrl.searchParams.get('id_instagram');
-        const date = request.nextUrl.searchParams.get('date') || new Date().toISOString().split('T')[0];
+        const date = request.nextUrl.searchParams.get('date') || getTodayBrazil();
 
         if (!id_instagram) {
             return NextResponse.json({ error: 'id_instagram is required' }, { status: 400 });

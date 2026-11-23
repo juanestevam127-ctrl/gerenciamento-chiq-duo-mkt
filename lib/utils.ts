@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
+export function getTodayBrazil(): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
 export function parseLocalDate(dateStr: string | null | undefined): Date | null {
     if (!dateStr) return null;
     try {

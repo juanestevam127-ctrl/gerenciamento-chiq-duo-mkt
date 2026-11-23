@@ -12,7 +12,7 @@ import { AlertsList } from './components/AlertsList';
 import { AutoRetryMonitor } from './components/AutoRetryMonitor';
 import { DetailedTable } from './components/DetailedTable';
 import { Cliente, Conteudo, ControlePostagem, StoryProgressItem, DuplicidadeInfo } from '@/types/database';
-import { parseLocalDate } from '@/lib/utils';
+import { parseLocalDate, getTodayBrazil } from '@/lib/utils';
 
 interface DashboardData {
     clientes: Cliente[];
@@ -23,8 +23,8 @@ interface DashboardData {
 export default function DashboardPage() {
     const [mounted, setMounted] = useState(false);
     const [dateRange, setDateRange] = useState({
-        start: new Date().toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0],
+        start: getTodayBrazil(),
+        end: getTodayBrazil(),
         label: 'Hoje'
     });
     const [data, setData] = useState<DashboardData>({ clientes: [], conteudos: [], postagens: [] });
@@ -191,13 +191,13 @@ export default function DashboardPage() {
                     ? storiesItems.filter(i => i.postedFb).length
                     : fbStoryPosts.length;
 
-                // 4. Duplicate Detection
+                // 4. Duplicate Detection (Detalhamento granular: Feed IG, Feed FB, Story # específico)
                 const duplicidades: DuplicidadeInfo[] = [];
 
                 if (igFeedPosts.length > 1) {
                     duplicidades.push({
                         tipo: 'FEED',
-                        descricao: `${igFeedPosts.length}x posts de FEED no Instagram`,
+                        descricao: `Feed IG duplicado (${igFeedPosts.length}x)`,
                         ids: igFeedPosts.map(p => p.id),
                     });
                 }
@@ -205,7 +205,7 @@ export default function DashboardPage() {
                 if (fbFeedPosts.length > 1) {
                     duplicidades.push({
                         tipo: 'FEED FACEBOOK',
-                        descricao: `${fbFeedPosts.length}x posts de FEED no Facebook`,
+                        descricao: `Feed FB duplicado (${fbFeedPosts.length}x)`,
                         ids: fbFeedPosts.map(p => p.id),
                     });
                 }
@@ -221,9 +221,11 @@ export default function DashboardPage() {
                 });
                 igStoriesByUrl.forEach((plist, url) => {
                     if (plist.length > 1) {
+                        const matchingIndex = storiesItems.findIndex(item => (item.url || '').trim() === url);
+                        const storyLabel = matchingIndex >= 0 ? `Story #${matchingIndex + 1}` : 'Story';
                         duplicidades.push({
                             tipo: 'STORIES',
-                            descricao: `${plist.length}x o mesmo Story no Instagram`,
+                            descricao: `${storyLabel} duplicado no IG (${plist.length}x)`,
                             ids: plist.map(p => p.id),
                             conteudo_postado: url,
                         });
@@ -233,7 +235,7 @@ export default function DashboardPage() {
                 if (storiesTotal > 0 && igStoryPosts.length > storiesTotal && !duplicidades.some(d => d.tipo === 'STORIES')) {
                     duplicidades.push({
                         tipo: 'STORIES',
-                        descricao: `${igStoryPosts.length} stories postados para ${storiesTotal} agendados (${igStoryPosts.length - storiesTotal} a mais no IG)`,
+                        descricao: `${igStoryPosts.length} stories no IG (excesso de ${igStoryPosts.length - storiesTotal})`,
                         ids: igStoryPosts.map(p => p.id),
                     });
                 }
@@ -249,9 +251,11 @@ export default function DashboardPage() {
                 });
                 fbStoriesByUrl.forEach((plist, url) => {
                     if (plist.length > 1) {
+                        const matchingIndex = storiesItems.findIndex(item => (item.url || '').trim() === url);
+                        const storyLabel = matchingIndex >= 0 ? `Story #${matchingIndex + 1}` : 'Story';
                         duplicidades.push({
                             tipo: 'STORIES FACEBOOK',
-                            descricao: `${plist.length}x o mesmo Story no Facebook`,
+                            descricao: `${storyLabel} duplicado no FB (${plist.length}x)`,
                             ids: plist.map(p => p.id),
                             conteudo_postado: url,
                         });
@@ -261,7 +265,7 @@ export default function DashboardPage() {
                 if (hasFacebook && storiesTotal > 0 && fbStoryPosts.length > storiesTotal && !duplicidades.some(d => d.tipo === 'STORIES FACEBOOK')) {
                     duplicidades.push({
                         tipo: 'STORIES FACEBOOK',
-                        descricao: `${fbStoryPosts.length} stories postados para ${storiesTotal} agendados (${fbStoryPosts.length - storiesTotal} a mais no FB)`,
+                        descricao: `${fbStoryPosts.length} stories no FB (excesso de ${fbStoryPosts.length - storiesTotal})`,
                         ids: fbStoryPosts.map(p => p.id),
                     });
                 }
@@ -388,7 +392,7 @@ export default function DashboardPage() {
 
     const alerts = useMemo(() => {
         if (!processedData || !mounted) return [];
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getTodayBrazil();
         // Filter rows for "Today" alerts mainly, or all active alerts in range
         return processedData.rows
             .filter(r => r.status === 'late' || (r.status === 'pending' && (!r.date || r.date === todayStr)))

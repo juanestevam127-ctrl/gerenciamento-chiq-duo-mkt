@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nocodb } from '@/lib/nocodb';
 import { Cliente, ControlePostagem, WebhookRetryLog } from '@/types/database';
+import { getTodayBrazil } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ function isPostingComplete(postagens: ControlePostagem[], required: TipoPostagem
  */
 export async function POST(request: NextRequest) {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayBrazil();
         const nowUtc = new Date();
 
         // 1. Fetch all clients from NocoDB
@@ -115,29 +116,23 @@ export async function POST(request: NextRequest) {
                 continue;
             }
 
-            // 3. Fetch retry logs for this client
+            // 3. Fetch retry logs for this client today
             const logs = await nocodb.webhookRetryLog.list({ date: today, id_instagram: cliente.id_instagram });
             const tentativasCount = logs.length;
 
-            // Max retries reached
-            if (tentativasCount >= 3) {
-                results.push({ 
-                    cliente: cliente.nome_cliente, 
-                    username_instagram: cliente.username_instagram,
-                    action: 'max_tentativas', 
-                    tentativas: tentativasCount 
-                });
-                continue;
-            }
-
-            // CHECK INTERVAL: Ensure 30 minutes have passed since last attempt
-            const INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+            // CHECK INTERVAL: Ensure 5 minutes have passed since last attempt per client
+            const INTERVAL_MS = 5 * 60 * 1000; // 5 minutos de intervalo
             if (tentativasCount > 0) {
-                const lastRetry = logs[logs.length - 1];
-                const lastRetryTime = new Date(lastRetry.disparado_em);
-                const nextAllowedTime = new Date(lastRetryTime.getTime() + INTERVAL_MS);
+                const lastRetry = logs.reduce((latest, current) => {
+                    const currentTime = new Date(current.disparado_em).getTime();
+                    const latestTime = new Date(latest.disparado_em).getTime();
+                    return currentTime > latestTime ? current : latest;
+                }, logs[0]);
+
+                const lastRetryTime = new Date(lastRetry.disparado_em).getTime();
+                const nextAllowedTime = new Date(lastRetryTime + INTERVAL_MS);
                 
-                if (nowUtc < nextAllowedTime) {
+                if (Date.now() < nextAllowedTime.getTime()) {
                     results.push({
                         cliente: cliente.nome_cliente,
                         username_instagram: cliente.username_instagram,

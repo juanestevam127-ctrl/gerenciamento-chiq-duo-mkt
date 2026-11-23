@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Filter, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Cliente } from '@/types/database';
+import { getTodayBrazil } from '@/lib/utils';
 
 interface PostagemRow {
     id: string;
@@ -18,7 +19,7 @@ interface PostagemRow {
     cliente?: { username_instagram: string; nome_cliente: string };
 }
 
-const today = new Date().toISOString().split('T')[0];
+const today = getTodayBrazil();
 
 export default function PostagensPage() {
     const [clientes, setClientes] = useState<Cliente[]>([]);
