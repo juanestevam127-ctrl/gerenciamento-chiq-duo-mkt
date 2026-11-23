@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { RefreshCw, Send, CheckCircle2, AlertCircle, Clock, XCircle, Loader2 } from 'lucide-react';
 import { Cliente } from '@/types/database';
 
@@ -77,10 +77,8 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
     const [running, setRunning] = useState(false);
     const [results, setResults] = useState<RetryResult[]>([]);
     const [lastRun, setLastRun] = useState<Date | null>(null);
-    const [autoEnabled, setAutoEnabled] = useState(true);
-    const autoIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const runAutoRetry = useCallback(async () => {
+    const runManualRetry = useCallback(async () => {
         if (running) return;
         setRunning(true);
         try {
@@ -96,32 +94,11 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
                 }
             }
         } catch (err) {
-            console.error('Auto-retry error:', err);
+            console.error('Manual retry error:', err);
         } finally {
             setRunning(false);
         }
     }, [running, onRefresh]);
-
-    // Auto-run every 1 minute when there are late clients and auto is enabled
-    useEffect(() => {
-        if (autoIntervalRef.current) clearInterval(autoIntervalRef.current);
-
-        if (autoEnabled && lateClients.length > 0) {
-            autoIntervalRef.current = setInterval(runAutoRetry, 60 * 1000);
-        }
-
-        return () => {
-            if (autoIntervalRef.current) clearInterval(autoIntervalRef.current);
-        };
-    }, [autoEnabled, lateClients.length, runAutoRetry]);
-
-    // Auto-run on mount if there are late clients
-    useEffect(() => {
-        if (lateClients.length > 0) {
-            runAutoRetry();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     const dispatched = results.filter(r => r.action === 'webhook_disparado');
     const waitingInterval = results.filter(r => r.action === 'aguardando_intervalo');
@@ -134,35 +111,23 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
                 <div className="flex items-center justify-between mb-1">
                     <div>
                         <h3 className="font-semibold text-white flex items-center gap-2">
-                            <RefreshCw className={`w-4 h-4 text-purple-400 ${running ? 'animate-spin' : ''}`} />
-                            Auto-Retry Monitor
+                            <Send className="w-4 h-4 text-purple-400" />
+                            Disparo Manual de Webhook
                         </h3>
                         <p className="text-xs text-slate-400 mt-0.5">
-                            {autoEnabled ? 'Verificação automática a cada 1 min' : 'Automático pausado'}{' '}
-                            {lastRun && `• Última: ${lastRun.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`}
+                            Ação humana sob demanda • Intervalo de segurança: 5 min por cliente{' '}
+                            {lastRun && `• Último disparo: ${lastRun.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`}
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {/* Toggle auto */}
-                        <button
-                            onClick={() => setAutoEnabled(v => !v)}
-                            title={autoEnabled ? 'Pausar automático' : 'Ativar automático'}
-                            className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-all ${
-                                autoEnabled
-                                    ? 'bg-green-600/20 text-green-300 border-green-500/30 hover:bg-green-600/30'
-                                    : 'bg-slate-700/50 text-slate-400 border-slate-600/30 hover:bg-slate-700'
-                            }`}
-                        >
-                            {autoEnabled ? '🟢 Auto' : '⏸ Paused'}
-                        </button>
                         {/* Manual trigger */}
                         <button
-                            onClick={runAutoRetry}
-                            disabled={running}
-                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-purple-600/80 hover:bg-purple-600 text-white border border-purple-500/50 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={runManualRetry}
+                            disabled={running || lateClients.length === 0}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white border border-purple-500/50 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                         >
-                            {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                            Verificar Agora
+                            {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                            Disparar para Atrasados
                         </button>
                     </div>
                 </div>
@@ -193,12 +158,12 @@ export function AutoRetryMonitor({ lateClients, onRefresh }: AutoRetryMonitorPro
             <div className="overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                 {results.length === 0 && !running && (
                     <div className="text-center py-10 text-slate-500">
-                        <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                        <p className="text-sm">Nenhuma verificação executada ainda.</p>
+                        <Send className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                        <p className="text-sm">Nenhum disparo manual efetuado nesta sessão.</p>
                         <p className="text-xs mt-1">
                             {lateClients.length > 0
-                                ? 'Clique em "Verificar Agora" ou aguarde a execução automática.'
-                                : 'Não há clientes atrasados no momento.'}
+                                ? `Há ${lateClients.length} cliente(s) com postagem atrasada. Clique em "Disparar para Atrasados" para enviar.`
+                                : 'Todos os clientes estão com as postagens em dia ou não há atrasos no momento.'}
                         </p>
                     </div>
                 )}

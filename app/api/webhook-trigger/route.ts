@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { nocodb } from '@/lib/nocodb';
+import { getTodayBrazil } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +32,35 @@ export async function POST(request: NextRequest) {
             cliente = await nocodb.clientes.getByInstagramId(id_instagram);
         }
 
+        const finalIdInstagram = cliente?.id_instagram || id_instagram;
+        const today = getTodayBrazil();
+
+        // Intervalo de segurança: 5 minutos entre disparos manuais por cliente
+        const INTERVAL_MS = 5 * 60 * 1000;
+        let logs: any[] = [];
+        if (finalIdInstagram) {
+            logs = await nocodb.webhookRetryLog.list({ date: today, id_instagram: finalIdInstagram });
+            if (logs.length > 0) {
+                const lastRetry = logs.reduce((latest, current) => {
+                    return new Date(current.disparado_em).getTime() > new Date(latest.disparado_em).getTime() ? current : latest;
+                }, logs[0]);
+                const lastTime = new Date(lastRetry.disparado_em).getTime();
+                if (Date.now() - lastTime < INTERVAL_MS) {
+                    const remainingSec = Math.ceil((INTERVAL_MS - (Date.now() - lastTime)) / 1000);
+                    const remainingMin = Math.ceil(remainingSec / 60);
+                    return NextResponse.json(
+                        { error: `Aguarde ${remainingMin} min (${remainingSec}s) para disparar novamente para este cliente.` },
+                        { status: 429 }
+                    );
+                }
+            }
+        }
+
         const hasFb = clientHasFacebook(cliente);
         const targetUrl = resolveWebhookUrl(cliente, webhookUrl);
 
         const payload = {
-            id_instagram: cliente?.id_instagram || id_instagram,
+            id_instagram: finalIdInstagram,
             clienteId: cliente?.id || clienteId,
             nome_cliente: cliente?.nome_cliente,
             username_instagram: cliente?.username_instagram,
@@ -58,6 +83,17 @@ export async function POST(request: NextRequest) {
                 { error: `Webhook retornou status ${response.status}` },
                 { status: 502 }
             );
+        }
+
+        // Registrar tentativa no log do NocoDB
+        if (finalIdInstagram) {
+            await nocodb.webhookRetryLog.create({
+                id_instagram: finalIdInstagram,
+                data_postagem: today,
+                tentativa: logs.length + 1,
+                disparado_em: new Date().toISOString(),
+                status: 'success',
+            });
         }
 
         return NextResponse.json({ success: true, clienteId, targetUrl, tem_facebook: hasFb });
@@ -88,15 +124,34 @@ export async function PUT(request: NextRequest) {
             if (c.id_instagram) clientMap.set(String(c.id_instagram), c);
         }
 
-        // Envia 1 webhook separado para cada cliente
+        const today = getTodayBrazil();
+        const INTERVAL_MS = 5 * 60 * 1000;
+        const now = Date.now();
+
+        // Envia 1 webhook separado para cada cliente respeitando os 5 minutos de intervalo
         const results = await Promise.allSettled(
             targets.map(async (target) => {
                 const cliente = clientMap.get(String(target.clienteId)) || (target.id_instagram ? clientMap.get(String(target.id_instagram)) : null);
+                const finalIdInstagram = cliente?.id_instagram || target.id_instagram;
+
+                if (finalIdInstagram) {
+                    const logs = await nocodb.webhookRetryLog.list({ date: today, id_instagram: finalIdInstagram });
+                    if (logs.length > 0) {
+                        const lastRetry = logs.reduce((latest, current) => {
+                            return new Date(current.disparado_em).getTime() > new Date(latest.disparado_em).getTime() ? current : latest;
+                        }, logs[0]);
+                        const lastTime = new Date(lastRetry.disparado_em).getTime();
+                        if (now - lastTime < INTERVAL_MS) {
+                            return { clienteId: target.clienteId, ok: false, status: 429, error: 'Aguardando intervalo de 5 min' };
+                        }
+                    }
+                }
+
                 const hasFb = clientHasFacebook(cliente);
                 const targetUrl = resolveWebhookUrl(cliente, target.webhookUrl);
 
                 const payload = {
-                    id_instagram: cliente?.id_instagram || target.id_instagram,
+                    id_instagram: finalIdInstagram,
                     clienteId: cliente?.id || target.clienteId,
                     nome_cliente: cliente?.nome_cliente,
                     username_instagram: cliente?.username_instagram,
@@ -112,6 +167,17 @@ export async function PUT(request: NextRequest) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                 });
+
+                if (res.ok && finalIdInstagram) {
+                    const logs = await nocodb.webhookRetryLog.list({ date: today, id_instagram: finalIdInstagram });
+                    await nocodb.webhookRetryLog.create({
+                        id_instagram: finalIdInstagram,
+                        data_postagem: today,
+                        tentativa: logs.length + 1,
+                        disparado_em: new Date().toISOString(),
+                        status: 'success',
+                    });
+                }
 
                 return { clienteId: target.clienteId, targetUrl, status: res.status, ok: res.ok, tem_facebook: hasFb };
             })
