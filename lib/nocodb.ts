@@ -395,6 +395,24 @@ export const nocodb = {
             );
             return true;
         },
+
+        async deleteMany(ids: (string | number)[]): Promise<boolean> {
+            if (!ids || ids.length === 0) return true;
+            try {
+                await nocoFetch(
+                    `/api/v2/tables/${TABLES.CONTROLE}/records`,
+                    {
+                        method: 'DELETE',
+                        body: JSON.stringify(ids.map(id => ({ Id: Number(id) }))),
+                    }
+                );
+                return true;
+            } catch (err) {
+                console.warn('Batch delete failed in NocoDB, trying sequential delete:', err);
+                await Promise.allSettled(ids.map(id => nocodb.controlePostagens.delete(id)));
+                return true;
+            }
+        },
     },
 
     // ---------------- USUARIOS ----------------

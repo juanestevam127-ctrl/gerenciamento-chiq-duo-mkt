@@ -72,3 +72,47 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const body = await request.json().catch(() => ({}));
+        const searchParams = request.nextUrl.searchParams;
+        const idFromQuery = searchParams.get('id');
+
+        const ids: (string | number)[] = [];
+        if (body.ids && Array.isArray(body.ids)) {
+            ids.push(...body.ids);
+        } else if (body.id) {
+            ids.push(body.id);
+        } else if (idFromQuery) {
+            ids.push(idFromQuery);
+        }
+
+        if (ids.length === 0) {
+            return NextResponse.json(
+                { error: 'Nenhum ID de postagem informado para exclusão' },
+                { status: 400 }
+            );
+        }
+
+        console.log(`API DELETE /api/postagens: Excluindo ${ids.length} postagem(ns)...`, ids);
+
+        if (ids.length === 1) {
+            await nocodb.controlePostagens.delete(ids[0]);
+        } else {
+            await nocodb.controlePostagens.deleteMany(ids);
+        }
+
+        return NextResponse.json({
+            success: true,
+            deletedCount: ids.length,
+            ids,
+        });
+    } catch (error: any) {
+        console.error('Error deleting postagens:', error);
+        return NextResponse.json(
+            { error: 'Erro ao excluir postagem(ns)', details: error.message },
+            { status: 500 }
+        );
+    }
+}
